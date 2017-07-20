@@ -4,27 +4,37 @@ Strict
 Import pub.win32
 Import srs.directx11
 
-Global ship:String
-ship :+ "linestrip~n"
-ship :+ "v -0.5 -0.8 0.0~n"
-ship :+ "v 0.0 0.8 0.0~n"
-ship :+ "v 0.5 -0.8 0.0~n"
-ship :+ "v 0.25 -0.5 0.0~n"
-ship :+ "v -0.25 -0.5 0.0~n"
-ship :+ "f 0 1 2 3 4 0"
+Global shipMeshData:String
+shipMeshData :+ "linelist~n"
+shipMeshData :+ "v -0.5 -0.8 0.0~n"
+shipMeshData :+ "v 0.0 0.8 0.0~n"
+shipMeshData :+ "v 0.5 -0.8 0.0~n"
+shipMeshData :+ "v 0.25 -0.5 0.0~n"
+shipMeshData :+ "v -0.25 -0.5 0.0~n"
+shipMeshData :+ "v 0.0 0.2 0.0~n"
+shipMeshData :+ "v 0.0 -0.3 0.0~n"
+shipMeshData :+ "f 0 1 1 2 2 3 3 4 4 0 5 6"
 
-Global bullet:String
-bullet :+ "linelist~n"
-bullet :+ "v -0.03 -0.03 0.0~n"
-bullet :+ "v -0.03 0.03 0.0~n"
-bullet :+ "v 0.03 0.03 0.0~n"
-bullet :+ "v 0.03 -0.03 0.0~n"
-bullet :+ "f 0 1 2 3 0~n"
+Global bulletMeshData:String
+bulletMeshData :+ "linelist~n"
+bulletMeshData :+ "v -0.03 -0.03 0.0~n"
+bulletMeshData :+ "v -0.03 0.03 0.0~n"
+bulletMeshData :+ "v 0.03 0.03 0.0~n"
+bulletMeshData :+ "v 0.03 -0.03 0.0~n"
+bulletMeshData :+ "f 0 1 2 3 0~n"
+
+Global particleMeshData:String
+particleMeshData :+ "linelist~n"
+particleMeshData :+ "v -0.02 -0.02 0.0~n"
+particleMeshData :+ "v -0.02 0.02 0.0~n"
+particleMeshData :+ "v 0.02 0.02 0.0~n"
+particleMeshData :+ "v 0.02 -0.02 0.0~n"
+particleMeshData :+ "f 0 1 2 3 0~n"
 
 Type tAsteroid	
 	Method Create:String()
 		Local t:Float = (1.0 + Sqr(5.0)) / 2.0
-		
+
 		Local meshdata:String = "trianglelist~n"
 		meshdata :+ "v -1.0 " + t + " 0.0~n"
 		meshdata :+ "v 1.0 " + t + " 0.0~n"
@@ -446,7 +456,7 @@ Type tGpuD3D11
 EndType
 
 Type tGame
-	Field _gamestate:Int = 1
+	Field _gamestate:Int
 
 	Field _window:TWindow
 	Field _pipeline:TGpuD3D11
@@ -463,19 +473,33 @@ Type tGame
 	
 	Field _scene:tobject
 	Field _ship:tobject
-	Field _rocks:TList
+	Field _rockstore:TList
+	
+	Field _particleStore:TList
 	
 	Field _font:tFont
 	Field _copyright:tobject
+	Field _pressToStart:tobject
+	Field _title:tobject
 
-	Field _bullets:TList
+	Field _bulletstore:TList
+	
+	Const COLLISION_ID_SHIP:Int = 1
+	Const COLLISION_ID_BULLET:Int = 2
+	Const COLLISION_ID_ROCK:Int = 3
 
 	Method init(Width:Int, Height:Int)
-		_bullets = New TList
-		_rocks = New TList
-		_scene = New tobject
+		_particleStore = New TList
+		_bulletstore = New TList
+		_rockstore = New TList
 		
+		_scene = New tobject
+		Local collisionManager:tCollisionManager = New tCollisionManager
+		collisionManager.addCollidableIds(COLLISION_ID_SHIP, COLLISION_ID_ROCK)
+		collisionManager.addCollidableIds(COLLISION_ID_BULLET, COLLISION_ID_ROCK)
+
 		_scene.setExtra(Self)
+		_scene.addAnimator(collisionManager)
 
 		_window = New TWindow.Create(Width, Height)
 		_pipeline = New TGpuD3D11.Create(Width, Height, _window.getWindowHandle())
@@ -492,14 +516,35 @@ Type tGame
 	Method createGameObjects()
 		_font = New tFont
 		
+		' title
+		Local msg:String = "StarRoids"
+		_title = New tobject
+		_title.setparent(_scene)
+		_title.moveTo(0, 4, -40)
+
+		Local titleMesh:tmesh = _font.createsentence(msg)
+		Local titleObject:tobject = New tObject.Create(_pipeline._device, titleMesh, _title)
+		titleObject.moveto( -Float(msg.length)/2, -.5, 0)
+
+		
+		' press to start
+		msg = "insert coin to play"
+		_pressToStart = New tobject
+		_pressToStart.setparent(_scene)
+		_pressToStart.moveTo(0, 0, 0)
+		_pressToStart.addAnimator(New tIntroAnimator)
+
+		Local pressToStartMesh:tmesh = _font.createsentence(msg)
+		Local pressToStartObject:tobject = New tObject.Create(_pipeline._device, pressToStartMesh, _pressToStart)
+		pressToStartObject.moveto( -Float(msg.length)/2, -.5, 0)
+
 		' create copyright for atari
 		_copyright = New tobject
 		_copyright.setparent(_scene)
-		_copyright.moveTo(0, -15, 0)
+		_copyright.moveTo(0, -21, 25)
 		
-		Local msg:String = "original game by atari inc 1979"
+		msg = "original game idea by atari inc 1979"
 		Local textmesh:tmesh = _font.createSentence(msg)
-		'textmesh.scale(0.5, 0.5, 0.5)
 		Local text:tobject = New tObject.Create(_pipeline._device, textmesh, _copyright)
 		text.moveto( -Float(msg.length)/2, -.5, 0)
 
@@ -508,36 +553,102 @@ Type tGame
 		_copyright.addAnimator(textRoller)
 		
 		' create ship
-		Local shipmesh:tmesh = parsemeshdata(ship)
-		shipmesh.scale(0.7, 0.7, 0.7)
-		_ship = New tobject.Create(_pipeline._device, shipmesh, _scene)
+		Local shipmesh:tmesh = parsemeshdata(shipMeshData, 0.7)
+		_ship = New tobject.Create(_pipeline._device, shipmesh, Null)
 		_ship.setName("ship")
 		Local shipAnimator:tShipAnimator = New tShipAnimator
 		_ship.addAnimator(shipAnimator)
+		_ship.setCollisionId(COLLISION_ID_SHIP)
+		_ship.setCollisionRadius(0.7)
 		
-		' create rocks
+		' create bullets
+		Local bulletMesh:tMesh = parsemeshdata(bulletMeshData, 1.0)
 		For Local i:Int = 0 Until 10
-			Local bullet:tobject = New tobject.Create(_pipeline._device, parsemeshdata(bullet), Null)
-			_bullets.addlast(bullet)
+			Local bullet:tobject = New tobject.Create(_pipeline._device, bulletMesh, Null)
+			bullet.setCollisionId(COLLISION_ID_BULLET)
+			bullet.setCollisionRadius(0.05)
+			_bulletstore.addlast(bullet)
+		Next
+		
+		' create some explosion particles
+		Local particleMesh:tmesh = parsemeshdata(particleMeshData, Rnd(1.0, 2.0))
+		For Local i:Int = 0 Until 256
+			Local particle:tobject = New tobject.Create(_pipeline._device, particleMesh, Null)
+			_particleStore.addLast(particle)
 		Next
 		
 		createRocks()
 	EndMethod
-	
+
 	Method createRocks()
 		Local rockdata:String = New tasteroid.Create()
-		Local rockmesh:tmesh = parsemeshdata(rockdata)
-		'rockmesh.scale(0.5, 0.5, 0.5)
 		
-		Local rock:tobject = New tobject.Create(_pipeline._device, rockmesh, _scene)
-		Local rockanim:tRockAnimator = New tRockAnimator
+		' create 16 big rocks
+		For Local i:Int = 0 Until 16
+			Local rockmesh:tmesh = parsemeshdata(rockdata, 1.0)
+			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null)
+			rock.setCollisionId(COLLISION_ID_ROCK)
+			rock.setCollisionRadius((1.0 + Sqr(5.0)) / 2.0)
+			
+			tobjectrock(rock).setSize(3)			
+			_rockstore.addLast(rock)
+		Next
 		
-		SeedRnd(MilliSecs())
-		rockanim.init(Rnd(-0.1, 0.1), Rnd(-0.1, 0.1), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
-		rock.addAnimator(rockanim)
+		' 32 middle size
+		For Local i:Int = 0 Until 32
+			Local rockmesh:tmesh = parsemeshdata(rockdata, 0.6)
+			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null)
+			rock.setCollisionId(COLLISION_ID_ROCK)
+			rock.setCollisionRadius(((1.0 + Sqr(5.0)) / 2.0) * 0.6)
+			
+			tobjectrock(rock).setSize(2)
+			_rockstore.addLast(rock)
+		Next
+
+		'  64 small - should be waaay more than enough
+		For Local i:Int = 0 Until 64
+			Local rockmesh:tmesh = parsemeshdata(rockdata, 0.3)
+			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null)
+			rock.setCollisionId(COLLISION_ID_ROCK)
+			rock.setCollisionRadius(((1.0 + Sqr(5.0)) / 2.0) * 0.3)
+			
+			tobjectrock(rock).setSize(1)
+			_rockstore.addLast(rock)
+		Next
 	EndMethod
 	
-	Method parsemeshdata:tmesh(data:String)
+	Method getRock:tobject(rocksize:Int)
+		For Local obj:tobject = EachIn _rockstore
+			Local rock:tobjectrock = tobjectrock(obj)
+			If rock And rock._size = rocksize
+				_rockstore.remove(rock)
+				Return rock
+			EndIf
+		Next
+	EndMethod
+	
+	Method getBullet:tobject()
+		Return tobject(_bulletstore.removefirst())
+	EndMethod
+	
+	Method getParticle:tobject()
+		Return tobject(_particlestore.removefirst())
+	EndMethod
+	
+	Method returnBullet(bullet:tobject)
+		_bulletstore.addlast(bullet)
+	EndMethod
+	
+	Method returnRock(rock:tobject)
+		_rockstore.addlast(rock)
+	EndMethod
+	
+	Method returnParticle(rock:tobject)
+		_particlestore.addlast(rock)
+	EndMethod
+
+
+	Method parsemeshdata:tmesh(data:String, scale:Float)
 		Local lines:String[] = data.split("~n")
 		Local mesh:tmesh = New tmesh
 
@@ -560,6 +671,7 @@ Type tGame
 			EndSelect
 		Next
 		
+		mesh.scale(scale, scale, scale)
 		Return mesh
 	EndMethod
 	
@@ -701,11 +813,32 @@ Type tGame
 		Wend
 	EndMethod
 	
+	Method beginGameLevel(level:Int)
+		_ship.setparent(_scene)
+
+		SeedRnd(MilliSecs() * MilliSecs())
+		For Local i:Int = 0 Until 4		
+			Local rock:tobject = getRock(3)
+			If rock
+				rock.setparent(_scene)
+				rock.moveTo(Rnd(-20, 20), 14 + Rnd(-1, 1), 0)
+	
+				' big rock will move slower
+				Local rockanim:tRockAnimator = New tRockAnimator
+				rockanim.init(Rnd(-0.05, 0.05), Rnd(-0.05, 0.0), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rock.addAnimator(rockanim)
+			EndIf
+		Next		
+	EndMethod
+	
 	Method updateintro()
+		updategamelogic(MilliSecs())	
+		rendergame()
 	EndMethod
 	
 	Method updategame()
 		updategamelogic(MilliSecs())
+		updatecollisions()
 		
 		rendergame()
 	EndMethod
@@ -714,6 +847,9 @@ Type tGame
 		If KeyDown(KEY_ESCAPE) _gamestate = -1
 
 		_scene.update(timeMs:Int)
+	EndMethod
+	
+	Method updatecollisions()
 	EndMethod
 	
 	Method rendergame()
@@ -775,6 +911,10 @@ Type tobject
 	
 	Field _indexCount:Int
 	Field _topology:Int
+	
+	Field _collisionId:Int
+	Field _collisionRadius:Float
+	Field _collisionResponder:tCollisionResponder
 
 	Method New()
 		_animators = New TList
@@ -851,6 +991,18 @@ Type tobject
 	Method setExtra(extra:Object)
 		_extra = extra
 	EndMethod
+	
+	Method setCollisionId(Id:Int)
+		_collisionId = Id
+	EndMethod
+	
+	Method setCollisionRadius(radius:Float)
+		_collisionRadius = radius
+	EndMethod
+	
+	Method setCollisionResponder(responder:tCollisionResponder)
+		_collisionResponder = responder
+	EndMethod
 
 	Method moveTo(x:Float, y:Float, z:Float)
 		_posx = x; _posy = y; _posz = z
@@ -917,8 +1069,37 @@ Type tobject
 	EndMethod
 EndType
 
+Type tobjectRock Extends tobject
+	Field _size:Int ' range from 3 to 1 - 0 to destroy
+	
+	Method setSize(size:Int)
+		_size = size
+	EndMethod
+EndType
+
 Type tanimator
 	Method animate(obj:tobject, timeMs:Int) Abstract
+EndType
+
+Type tIntroAnimator Extends tAnimator
+	Method animate(obj:tobject, timeMs:Int)
+		If KeyDown(KEY_1)
+			FlushKeys()
+			
+			Local scene:tobject = obj.getScene()
+			Local game:tGame = tGame(scene._extra)
+			game._gamestate = 1
+			
+			game._pressToStart.setParent(Null)
+			game._title.setparent(Null)
+			game.BeginGameLevel(1)
+		EndIf
+	EndMethod
+EndType
+
+Type tGamePlayAnimator Extends tAnimator
+	Method animate(obj:tobject, timeMs:Int)
+	EndMethod
 EndType
 
 Type tRollAnimator Extends tanimator
@@ -996,19 +1177,18 @@ Type tShipAnimator Extends tanimator
 			Local scene:tobject = obj.getScene()
 			Local game:tgame = tgame(scene._extra)
 
-			If game
-				If Not game._bullets.isempty()
-					Local velx:Float = -Sin(obj._rotz)
-					Local vely:Float = Cos(obj._rotz)
-					Local bullet:tobject = tobject(game._bullets.removefirst())
-
+			If Not game._bulletstore.isempty()
+				Local velx:Float = -Sin(obj._rotz)
+				Local vely:Float = Cos(obj._rotz)
+				Local bullet:tobject = game.getBullet()
+				If bullet
 					Local animator:tBulletAnimator = New tBulletAnimator
 					animator.init(velx, vely, 0.0, 500, timeMs)
-
+		
 					bullet.addAnimator(animator)
 					bullet.setParent(scene)
 					bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
-					'bullet.update(timeMs)
+					bullet.setCollisionResponder(New tBulletToRockResponder)
 				EndIf
 			EndIf
 		EndIf	
@@ -1045,11 +1225,10 @@ Type tbulletAnimator Extends tanimator
 		If timeMs > _spawnTimeMs + _lifeTimeMs
 			Local scene:tobject = obj.getScene()
 			Local game:tgame = tgame(scene._extra)
-			If game	
-				obj._animators.clear()
-				obj.setParent(Null)
-				game._bullets.addLast(obj)
-			EndIf
+			
+			obj._animators.clear()
+			obj.setParent(Null)
+			game.returnBullet(obj)
 		EndIf
 	EndMethod
 EndType
@@ -1081,13 +1260,200 @@ Type tRockAnimator Extends tAnimator
 		If posy > 18 posy = -18.0
 		If posx < -30 posx = 30
 		If posx > 30 posx = -30
+		
 		obj.moveTo(posx, posy, posz)
-
 		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._posz + _rotz)
 	EndMethod
 EndType
 
+Type tParticleAnimator Extends tAnimator
+	Field _velx:Float
+	Field _vely:Float
+	Field _velz:Float
+	Field _rotx:Float
+	Field _roty:Float
+	Field _rotz:Float
+	Field _spawnTimeMs:Int
+	Field _lifeTimeMs:Int
+
+	Method init(velx:Float, vely:Float, velz:Float, rotx:Float, roty:Float, rotz:Float, spawnTimeMs:Int, lifeTimeMs:Int)
+		_velx = velx
+		_vely = vely
+		_velz = velz
+		_rotx = rotx
+		_roty = roty
+		_rotz = rotz
+		_spawnTimeMs = spawnTimeMs
+		_lifeTimeMs = lifeTimeMs
+	EndMethod
+
+	Method animate(obj:tobject, timeMs:Int)
+		Local posx:Float = obj._posx
+		Local posy:Float = obj._posy
+		Local posz:Float = obj._posz
+
+		posx :+ _velx
+		posy :+ _vely
+		posz :+ _velz
+
+		obj.moveTo(posx, posy, posz)
+		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._posz + _rotz)
+
+		If timeMs > _spawnTimeMs + _lifeTimeMs
+			Local scene:tobject = obj.getScene()
+			Local game:tgame = tgame(scene._extra)
+			
+			obj._animators.clear()
+			obj.setParent(Null)
+			game.returnParticle(obj)
+		EndIf
+	EndMethod
+EndType
+
+Type tCollisionResponder
+	Method collisionWith(collisionData:tCollision) Abstract
+EndType
+
+Type tBulletToRockResponder Extends tCollisionResponder
+	Method collisionWith(collisionData:tCollision)
+		Local bullet:tobject = collisionData._src
+		Local rock:tobject = collisionData._dst
+		
+		Local scene:tobject = rock.getScene()
+		Local game:tgame = tgame(scene._extra)
+		Local size:Int = tobjectrock(rock)._size - 1
+
+		' remove the bullet
+		bullet._animators.clear()
+		bullet.setParent(Null)
+		game.returnBullet(bullet)
+
+		' remove the rock
+		rock._animators.clear()
+		rock.setparent(Null)
+		game.returnRock(rock)
+		
+		' create an explosion
+		Local posx:Float = rock._posx
+		Local posy:Float = rock._posy
+		Local posz:Float = rock._posz
+
+		Local epicentre:tobject = New tobject
+		epicentre.setparent(scene)
+				
+		For Local i:Int = 0 Until 32
+			Local particleanim:tParticleAnimator = New tParticleAnimator
+			particleanim.init(Rnd(-0.5,0.5), Rnd(-0.5,0.5), 0.0, 0.0, 0.0, 0.0, collisionData._timeMs, 800)
+			
+			Local particle:tobject = game.getParticle()
+			If particle
+				particle.setParent(scene)
+				particle.moveTo(posx, posy, posz)
+				particle.addAnimator(particleanim)
+			EndIf
+		Next
+			
+		' split the rock into 2
+		If size <> 0
+			For Local i:Int = 0 Until 2
+				Local rock:tobjectrock = tobjectrock(game.getRock(size))
+				If rock
+					rock.moveTo(posx, posy, posz)
+					rock.setparent(scene)
+				
+					Local rockanim:tRockAnimator = New tRockAnimator
+					rockanim.init(Rnd(-0.1, 0.1), Rnd(-0.1, 0.1), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+					rock.addAnimator(rockanim)
+				EndIf
+			Next
+		EndIf
+	EndMethod
+EndType
+
+Type tCollisionType
+	Field _src:Int
+	Field _dest:Int
+	
+	Method Create:tCollisionType(src:Int, dest:Int)
+		_src = src
+		_dest = dest
+		Return Self
+	EndMethod
+EndType
+
+Type tCollision
+	Field _src:tobject
+	Field _dst:tobject
+	Field _timeMs:Int
+	
+	Method Create:tCollision(src:tObject, dst:tobject, timeMs:Int)
+		_src = src
+		_dst = dst
+		_timeMs = timeMs
+		Return Self
+	EndMethod
+EndType
+
+Type tCollisionManager Extends tAnimator
+	Field _collisionTypes:tCollisionType[]
+	Field _collisions:TList = New TList
+	
+	Method addCollidableIds(src:Int, dest:Int)
+		Local found:Int
+		For Local colliderType:tCollisionType = EachIn _collisionTypes
+			If colliderType._src = src And colliderType._dest = dest found = True
+		Next
+		
+		If Not found
+			_collisionTypes :+ [New tCollisionType.Create(src, dest)]
+		EndIf
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		_collisions.clear()
+
+		For Local colliderType:tCollisionType = EachIn _collisionTypes
+			For Local src:tObject = EachIn obj._children
+				If src._collisionId <> colliderType._src Continue
+				
+				For Local dst:tobject = EachIn obj._children
+					If dst._collisionId <> colliderType._dest Continue
+					
+					' hmm choose type of collision detection to use? simple spheres at the mo
+					Local srcPosx:Float = src._posx
+					Local srcPosy:Float = src._posy
+					Local srcPosz:Float = src._posz
+					
+					Local dstPosx:Float = dst._posx
+					Local dstPosy:Float = dst._posy
+					Local dstPosz:Float = dst._posz
+
+					' get the distance from src to dst
+					Local dx:Float = dstPosx - srcPosx
+					Local dy:Float = dstPosy - srcPosy
+					Local dz:Float = dstPosz - srcPosz
+					
+					Local dist:Float = dx *dx + dy * dy + dz *dz
+					
+					Local radii:Float = (src._collisionRadius + dst._collisionRadius)
+					radii :* radii
+
+					If radii > dist _collisions.addLast(New tCollision.Create(src, dst, timeMs))
+				Next
+			Next
+		Next
+
+		For Local collision:tCollision = EachIn _collisions
+			If collision._src._collisionResponder
+				collision._src._collisionResponder.collisionWith(collision)
+			EndIf
+		Next
+	EndMethod
+EndType
+
 AppTitle = "Star-Roids"
+
+HideMouse()
 Local game:tGame = New tGame
 game.init(1200, 700)
 game.run()
