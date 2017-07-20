@@ -4,6 +4,9 @@ Strict
 Import pub.win32
 Import srs.directx11
 
+Const RENDERFLAG_SOLID:Int = 1
+Const RENDERFLAG_WIREFRAME:Int = 2
+
 Global shipMeshData:String
 shipMeshData :+ "linelist~n"
 shipMeshData :+ "v -0.5 -0.8 0.0~n"
@@ -74,6 +77,42 @@ Type tAsteroid
 		meshdata :+ "f 6 2 10~n"
 		meshdata :+ "f 8 6 7~n"
 		meshdata :+ "f 9 8 1"
+
+		Return meshdata
+	EndMethod
+EndType
+
+Type tAsteroidBelt
+	Method Create:String()
+		Local radius:Float = 19
+		Local ringsize:Float = 2
+		
+		Local meshdata:String = "pointlist~n"
+
+		For Local ang:Float = 0.0 Until 360.0
+			Local random:Float = Rnd(-ringsize * 0.5, ringsize * 0.5)
+			Local randomradius:Float = radius + random
+
+			Local posx:Float = randomradius * Sin(ang)
+			Local posy:Float = randomradius * Cos(ang)
+			Local posz:Float = Rnd(-ringsize * 0.25, ringsize * 0.25)
+			meshdata :+ "v " + posx + " " + posy + " " + posz + "~n"
+		Next
+		
+		For Local ang:Float = 0.0 Until 360.0 Step 0.2
+			Local random:Float = Rnd(-ringsize * 0.5, ringsize * 0.5)
+			Local randomradius:Float = radius + random
+
+			Local posx:Float = (randomradius - radius * 0.1) * Sin(ang)
+			Local posy:Float = (randomradius - radius * 0.1) * Cos(ang)
+			Local posz:Float = Rnd(-ringsize * 0.5, ringsize * 0.5)
+			meshdata :+ "v " + posx + " " + posy + " " + posz + "~n"
+		Next
+		
+		meshdata :+ "f"
+		For Local i:Int = 0 Until 1800 + 360
+			meshdata :+ " " + i
+		Next
 
 		Return meshdata
 	EndMethod
@@ -267,6 +306,38 @@ Type math
 		inout[12] = 0.0; inout[13] = 0.0; inout[14] = 0.0; inout[15] = 1.0
 	EndFunction
 	
+	Method rotationaxism4(x:Float, y:Float, z:Float, ang:Float, inout:Float[])
+		inout[0] = Cos(ang) + x * x * (1.0 - Cos(ang))
+		inout[1] = x * y * (1.0 - Cos(ang) - z * Sin(ang))
+		inout[2] = x * z * (1 - Cos(ang) + y * Sin(ang))
+		inout[3] = 0.0
+		inout[4] = y * x * (1 - Cos(ang)) + z * Sin(ang)
+		inout[5] = Cos(ang) + y * y * (1 - Cos(ang))
+		inout[6] = y * z * (1 - Cos(ang)) - x * Sin(ang)
+		inout[7] = 0.0
+		inout[8] = z * x * (1 - Cos(ang)) - y * Sin(ang)
+		inout[9] = z * y * (1 - Cos(ang)) + x * Sin(ang)
+		inout[10]= Cos(ang) + z * z * (1 - Cos(ang))
+		inout[11]= 0.0
+		inout[12] = 0.0; inout[13] = 0.0; inout[14] = 0.0; inout[15] = 1.0
+	EndMethod
+	
+	Function quaternionTom4(x:Float, y:Float, z:Float, w:Float, inout:Float[])
+		inout[0] = 1.0 - 2 * (Y * Y) - 2.0 * (Z  * Z)
+		inout[1] = 2.0 * X * Y + 2.0 * W * Z
+		inout[2] = 2.0 * X * Z - 2.0 * W * Y
+		inout[3] = 0.0
+		inout[4] = 2.0 * Y * X - 2.0 * W * Z
+		inout[5] = 1.0 - 2 * (X * X) - 2 * (Z * Z)
+		inout[6] = 2.0 * Y * Z + 2.0 * W * X
+		inout[7] = 0.0
+		inout[8] = 2.0 * Z * X + 2.0 * W * Y
+		inout[9] = 2.0 * Z * Y - 2.0 * W * X
+		inout[10] = 1.0 - 2 * (X * X) - 2 * (Y * Y)
+		inout[11] = 0.0; 
+		inout[12] = 0.0; inout[13] = 0.0; inout[14] = 0.0; inout[15] = 1.0
+	EndFunction
+	
 	Function lerp:Float(a:Float, b:Float, t:Float)
 		Return a + (b - a) * t
 	EndFunction 
@@ -340,8 +411,8 @@ Type tGpuD3D11
 	Field _context:ID3D11DeviceContext
 	Field _swapchain:IDXGISwapchain
 	
-	Field _rasterstateWireframe:ID3D11RasterizerState
-	Field _rasterstateSolid:ID3D11RasterizerState
+	Field _rasterState:ID3D11RasterizerState
+	Field _depthStencilState:ID3D11DepthStencilState
 
 	Field _backbufferView:ID3D11RendertargetView
 	Field _depthstencilView:ID3D11DepthstencilView
@@ -351,6 +422,7 @@ Type tGpuD3D11
 		createDepthtarget(Width, Height)
 		createBackbuffer()
 		createRasterizerState()
+		createDepthStencilState()
 		
 		setDefaults(Width, Height)
 		Return Self
@@ -427,9 +499,17 @@ Type tGpuD3D11
 		state.CullMode = D3D11_CULL_BACK
 		state.MultisampleEnable = True
 		state.AntialiasedLineEnable = True
+		state.DepthBias = -100
 		
-		_device.CreateRasterizerState(state, _rasterstateWireframe)
-		If Not _rasterstateWireframe Throw " could not create rasterizer state"
+		_device.CreateRasterizerState(state, _rasterstate)
+		If Not _rasterstate Throw " could not create rasterizer state"
+	EndMethod
+	
+	Method createDepthStencilState()
+		Local desc:D3D11_DEPTH_STENCIL_DESC = New D3D11_DEPTH_STENCIL_DESC
+		desc.DepthEnable = False
+		
+		_device.CreateDepthStencilState(desc, _depthStencilState)
 	EndMethod
 	
 	Method setDefaults(Width:Int, Height:Int)
@@ -447,11 +527,19 @@ Type tGpuD3D11
 	EndMethod
 	
 	Method SetWireframeOn()
-		_context.RSSetState(_rasterStateWireframe)
+		_context.RSSetState(_rasterState)
 	EndMethod
 	
 	Method SetWireframeOff()
-		_context.RSSetState(_rasterStateSolid)
+		_context.RSSetState(Null)
+	EndMethod
+	
+	Method TurnOnDepthTesting()
+		_context.OMSetDepthStencilState(Null, 0)
+	EndMethod
+	
+	Method TurnOffDepthTesting()
+		_context.OMSetDepthStencilState(_depthstencilstate, 0)
 	EndMethod
 EndType
 
@@ -461,7 +549,8 @@ Type tGame
 	Field _window:TWindow
 	Field _pipeline:TGpuD3D11
 	
-	Field _constantPerFrame:ID3D11Buffer
+	Field _vsConstants:ID3D11Buffer
+	Field _psConstants:ID3D11Buffer
 	
 	Field _inputLayout:ID3D11InputLayout
 	Field _vertexShader:ID3D11VertexShader
@@ -471,7 +560,10 @@ Type tGame
 	Field _proj:Float[16]
 	Field _model:Float[16]
 	
+	Field _root:tobject
 	Field _scene:tobject
+	Field _gui:tobject
+
 	Field _ship:tobject
 	Field _rockstore:TList
 	
@@ -481,6 +573,7 @@ Type tGame
 	Field _copyright:tobject
 	Field _pressToStart:tobject
 	Field _title:tobject
+	Field _titlebelt:tobject
 
 	Field _bulletstore:TList
 	
@@ -493,13 +586,25 @@ Type tGame
 		_bulletstore = New TList
 		_rockstore = New TList
 		
-		_scene = New tobject
+		' setup root
+		_root = New tobject
+		_root.setname("root")
+		_root.setExtra(Self)
+		
 		Local collisionManager:tCollisionManager = New tCollisionManager
 		collisionManager.addCollidableIds(COLLISION_ID_SHIP, COLLISION_ID_ROCK)
 		collisionManager.addCollidableIds(COLLISION_ID_BULLET, COLLISION_ID_ROCK)
+		_root.addAnimator(collisionManager)
+		
+		' setup the game scene object
+		_scene = New tobject
+		_scene.setparent(_root)
+		_scene.setname("scene")
 
-		_scene.setExtra(Self)
-		_scene.addAnimator(collisionManager)
+		' setup the gui object
+		_gui = New tObject
+		_gui.setParent(_root)
+		_gui.setname("gui")
 
 		_window = New TWindow.Create(Width, Height)
 		_pipeline = New TGpuD3D11.Create(Width, Height, _window.getWindowHandle())
@@ -519,42 +624,78 @@ Type tGame
 		' title
 		Local msg:String = "StarRoids"
 		_title = New tobject
-		_title.setparent(_scene)
-		_title.moveTo(0, 4, -40)
+		_title.setparent(_gui)
+		_title.moveTo(0, 7, 0)
+		_title.setname("title")
 
 		Local titleMesh:tmesh = _font.createsentence(msg)
-		Local titleObject:tobject = New tObject.Create(_pipeline._device, titleMesh, _title)
-		titleObject.moveto( -Float(msg.length)/2, -.5, 0)
+		titlemesh.scale(2, 2, 2)
 
+		Local titleObject:tobject = New tObject.Create(_pipeline._device, titleMesh, _title, RENDERFLAG_WIREFRAME)
+		titleObject.moveto( -Float(msg.length), -.5, 0)
+		titleobject.setname("titleobject")
 		
-		' press to start
-		msg = "insert coin to play"
-		_pressToStart = New tobject
-		_pressToStart.setparent(_scene)
-		_pressToStart.moveTo(0, 0, 0)
-		_pressToStart.addAnimator(New tIntroAnimator)
+		' planet
+		Local planetdata:String = New tasteroid.Create()
+		Local planetmesh:tmesh = parsemeshdata(planetdata, 4)
+		Local planetobject:tobject = New tobject.Create(_pipeline._device, planetmesh, _scene, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
+		planetobject.setname("planet")
+		planetobject.moveTo(0.0, 5.5, 0.0)
 
+		Local planetrotation:tRotationAnimator = New tRotationAnimator
+		planetrotation.init(0.0, -0.1, 0.0)
+		planetobject.addAnimator(planetrotation)
+		planetobject.setcolour(0.3, 0.3, 0.3, 1.0)
+
+		' logo asteroid belt
+		Local titlebeltmeshdata:String = New tasteroidbelt.Create()
+		Local titlebeltmesh:tmesh = parsemeshdata(titlebeltmeshdata, 1.0)
+		
+		Local test:tobject = New tobject
+		test.setparent(_scene)
+		test.rotateTo(120.0, 0.0, 0.0)
+		test.moveTo(0.0, 5.5, 0.0)
+		test.setname("test")
+		_titlebelt = New tobject.Create(_pipeline._device, titlebeltmesh, test, RENDERFLAG_WIREFRAME)
+		_titlebelt.setColour(0.6, 0.6, 0.6, 1.0)
+		_titlebelt.setname("title asteroid belt")
+
+		Local rotation:tRotationAnimator = New tRotationAnimator
+		rotation.init(0.0, 0.0, 0.1)
+		_titlebelt.addAnimator(rotation)
+
+		' press to start
+		msg = "press space to play"
+		_pressToStart = New tobject
+		_pressToStart.setparent(_gui)
+		_pressToStart.moveTo(0, -4, 0)
+		_pressToStart.addAnimator(New tIntroAnimator)
+		_pressToStart.setname("pressstart")
+	
 		Local pressToStartMesh:tmesh = _font.createsentence(msg)
-		Local pressToStartObject:tobject = New tObject.Create(_pipeline._device, pressToStartMesh, _pressToStart)
+		Local pressToStartObject:tobject = New tObject.Create(_pipeline._device, pressToStartMesh, _pressToStart, RENDERFLAG_WIREFRAME)
 		pressToStartObject.moveto( -Float(msg.length)/2, -.5, 0)
+		pressToStartObject.setName("presstostartobject")
 
 		' create copyright for atari
 		_copyright = New tobject
-		_copyright.setparent(_scene)
+		_copyright.setparent(_gui)
 		_copyright.moveTo(0, -21, 25)
+		_copyright.setname("copyright")
 		
 		msg = "original game idea by atari inc 1979"
 		Local textmesh:tmesh = _font.createSentence(msg)
-		Local text:tobject = New tObject.Create(_pipeline._device, textmesh, _copyright)
+		Local text:tobject = New tObject.Create(_pipeline._device, textmesh, _copyright, RENDERFLAG_WIREFRAME)
 		text.moveto( -Float(msg.length)/2, -.5, 0)
-
+		test.setname("copyrighttext")
+	
 		Local textRoller:tRollAnimator = New tRollAnimator
 		textRoller.init(5000, 3000, MilliSecs())
 		_copyright.addAnimator(textRoller)
-		
+
 		' create ship
-		Local shipmesh:tmesh = parsemeshdata(shipMeshData, 0.7)
-		_ship = New tobject.Create(_pipeline._device, shipmesh, Null)
+		Local shipmesh:tmesh = parsemeshdata(shipMeshData, 1)
+		_ship = New tobject.Create(_pipeline._device, shipmesh, Null, RENDERFLAG_WIREFRAME)
 		_ship.setName("ship")
 		Local shipAnimator:tShipAnimator = New tShipAnimator
 		_ship.addAnimator(shipAnimator)
@@ -564,7 +705,7 @@ Type tGame
 		' create bullets
 		Local bulletMesh:tMesh = parsemeshdata(bulletMeshData, 1.0)
 		For Local i:Int = 0 Until 10
-			Local bullet:tobject = New tobject.Create(_pipeline._device, bulletMesh, Null)
+			Local bullet:tobject = New tobject.Create(_pipeline._device, bulletMesh, Null, RENDERFLAG_WIREFRAME)
 			bullet.setCollisionId(COLLISION_ID_BULLET)
 			bullet.setCollisionRadius(0.05)
 			_bulletstore.addlast(bullet)
@@ -573,7 +714,7 @@ Type tGame
 		' create some explosion particles
 		Local particleMesh:tmesh = parsemeshdata(particleMeshData, Rnd(1.0, 2.0))
 		For Local i:Int = 0 Until 256
-			Local particle:tobject = New tobject.Create(_pipeline._device, particleMesh, Null)
+			Local particle:tobject = New tobject.Create(_pipeline._device, particleMesh, Null, RENDERFLAG_WIREFRAME)
 			_particleStore.addLast(particle)
 		Next
 		
@@ -586,7 +727,7 @@ Type tGame
 		' create 16 big rocks
 		For Local i:Int = 0 Until 16
 			Local rockmesh:tmesh = parsemeshdata(rockdata, 1.0)
-			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null)
+			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius((1.0 + Sqr(5.0)) / 2.0)
 			
@@ -597,7 +738,7 @@ Type tGame
 		' 32 middle size
 		For Local i:Int = 0 Until 32
 			Local rockmesh:tmesh = parsemeshdata(rockdata, 0.6)
-			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null)
+			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(((1.0 + Sqr(5.0)) / 2.0) * 0.6)
 			
@@ -608,7 +749,7 @@ Type tGame
 		'  64 small - should be waaay more than enough
 		For Local i:Int = 0 Until 64
 			Local rockmesh:tmesh = parsemeshdata(rockdata, 0.3)
-			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null)
+			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(((1.0 + Sqr(5.0)) / 2.0) * 0.3)
 			
@@ -656,6 +797,7 @@ Type tGame
 			Local comp:String[] = line.split(" ")
 
 			Select comp[0]
+			Case "pointlist" mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST
 			Case "linelist"	mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST
 			Case "linestrip" mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
 			Case "trianglelist" mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
@@ -694,15 +836,20 @@ Type tGame
 	EndMethod
 	
 	Method createShaderResources()
-		' constants - per frame
+		' vertex shader constants - per frame
 		Local desc:D3D11_BUFFER_DESC = New D3D11_BUFFER_DESC
 		desc.ByteWidth = 128
 		desc.Usage = D3D11_USAGE_DYNAMIC
 		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER
 		desc.cpuAccessFlags = D3D11_CPU_ACCESS_WRITE
 
-		_pipeline._device.createBuffer(desc, Null, _constantPerFrame)
-		If Not _constantPerFrame DebugLog " cannot create vertex per frame constant buffer"
+		_pipeline._device.createBuffer(desc, Null, _vsConstants)
+		If Not _vsConstants DebugLog " cannot create buffer for vertex shader per frame constants"
+		
+		' pixel shader constants - per frame
+		desc.ByteWidth = 16
+		_pipeline._device.createBuffer(desc, Null, _psConstants)
+		If Not _vsConstants DebugLog " cannot create buffer for pixel shader per frame constants"
 		
 		' shaders
 		Local vertexshaderByteCode:ID3DBlob = createShaderSourceByteCode(shaderSource(), "VSMain", "vs_5_0")
@@ -791,8 +938,11 @@ Type tGame
 		source :+ "   return vsOut;~n"
 		source :+ "}~n"
 		
+		source :+ "cbuffer perFrame{~n"
+		source :+ "    float4 colour;~n"
+		source :+ "}~n"
 		source :+ "float4 PSMain(PSINPUT psIn) : SV_Target{~n"
-		source :+ "    return float4(1.0, 1.0, 1.0, 1.0);~n"
+		source :+ "    return colour;~n"
 		source :+ "};~n"
 
 		Return source
@@ -801,6 +951,7 @@ Type tGame
 	Method run()						
 		_pipeline.setWireframeOn()
 		_pipeline._context.IASetInputLayout(_inputLayout)
+		_pipeline._context.PSSetConstantBuffers(0, 1, Varptr _psConstants)
 
 		set3DProjection(30.0, 1200.0 / 700.0, 0.1, 1000.0)
 
@@ -814,13 +965,13 @@ Type tGame
 	EndMethod
 	
 	Method beginGameLevel(level:Int)
-		_ship.setparent(_scene)
+		_ship.setparent(_gui)
 
 		SeedRnd(MilliSecs() * MilliSecs())
 		For Local i:Int = 0 Until 4		
 			Local rock:tobject = getRock(3)
 			If rock
-				rock.setparent(_scene)
+				rock.setparent(_gui)
 				rock.moveTo(Rnd(-20, 20), 14 + Rnd(-1, 1), 0)
 	
 				' big rock will move slower
@@ -837,40 +988,75 @@ Type tGame
 	EndMethod
 	
 	Method updategame()
-		updategamelogic(MilliSecs())
-		updatecollisions()
-		
+		updategamelogic(MilliSecs())		
 		rendergame()
 	EndMethod
 
 	Method updategamelogic(timeMs:Int)
 		If KeyDown(KEY_ESCAPE) _gamestate = -1
 
-		_scene.update(timeMs:Int)
-	EndMethod
-	
-	Method updatecollisions()
+		_root.update(timeMs:Int)
 	EndMethod
 	
 	Method rendergame()
 			_pipeline.Cls([0.0, 0.0, 0.0, 1.0])
 			
 			' start frame
-			_pipeline._context.VSSetConstantBuffers(0, 1, Varptr _constantPerFrame)
+			_pipeline._context.VSSetConstantBuffers(0, 1, Varptr _vsConstants)
 			_pipeline._context.VSSetShader(_vertexShader, Null, 0)
 			_pipeline._context.PSSetShader(_pixelShader, Null, 0)
 			
 			' per frame
 			Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
-			_pipeline._context.Map(_constantPerFrame, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+			_pipeline._context.Map(_vsConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
 			MemCopy(map.pData, _view, 64)
 			MemCopy(map.pData + 64, _proj, 64)
-			_pipeline._context.Unmap(_constantPerFrame, 0)
-
-			' render scene
-			_scene.render(_pipeline._context)
+			_pipeline._context.Unmap(_vsConstants, 0)
+			
+			renderscene()
+			rendergui()
 			
 			_pipeline.Present(True)
+	EndMethod
+	
+	Method rendersolids(scene:tobject)
+		' render scene as black
+		Local colour:Float[] = [0.0, 0.0, 0.0, 1.0]
+		
+		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
+		_pipeline._context.Map(_psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+		MemCopy(map.pData, colour, 16)
+		_pipeline._context.Unmap(_psConstants, 0)
+		_pipeline._context.PSSetConstantBuffers(0, 1, Varptr _psConstants)
+		
+		' turn on depth testing and solid rendering
+		_pipeline.setWireframeOff()
+		scene.renderSolid(_pipeline._context)
+	EndMethod
+	
+	Method renderwireframes(scene:tobject)
+		' render scene as white wireframe			
+		Local colour:Float[] = [1.0, 1.0, 1.0, 1.0]
+		
+		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
+		_pipeline._context.Map(_psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+		MemCopy(map.pData, colour, 16)
+		_pipeline._context.Unmap(_psConstants, 0)
+
+		_pipeline.setWireframeOn()
+		scene.renderWireframe(_pipeline._context)
+	EndMethod
+	
+	Method renderscene()
+		_pipeline.turnOnDepthTesting()
+		rendersolids(_scene)
+		renderwireframes(_scene)
+	EndMethod
+	
+	Method rendergui()
+		_pipeline.turnOffDepthTesting()
+		rendersolids(_gui)
+		renderwireframes(_gui)
 	EndMethod
 	
 	Method shutdown()
@@ -915,15 +1101,20 @@ Type tobject
 	Field _collisionId:Int
 	Field _collisionRadius:Float
 	Field _collisionResponder:tCollisionResponder
+	
+	Field _colour:Float[4]
+	Field _renderFlag:Int
 
 	Method New()
 		_animators = New TList
 		_children = New TList
 		math.identitym4(_local)
 		math.identitym4(_world)
+		
+		_colour = [1.0, 1.0, 1.0, 1.0]
 	EndMethod
 	
-	Method Create:tobject(device:ID3D11Device, mesh:tmesh, parent:tobject)
+	Method Create:tobject(device:ID3D11Device, mesh:tmesh, parent:tobject, renderFlag:Int)
 		' vertex buffer
 		Local desc:D3D11_BUFFER_DESC = New D3D11_BUFFER_DESC
 		desc.ByteWidth = SizeOf(mesh._vertices)
@@ -956,17 +1147,21 @@ Type tobject
 
 		_indexCount = mesh._indices.length
 		_topology = mesh._topology
+		_renderflag = renderflag
 		
 		setParent(parent)		
 		Return Self
 	EndMethod
 	
-	Method getScene:tobject()
+	Method getRoot:tobject()
 		Local parent:tobject = _parent
-		While parent._parent
-			parent = parent._parent
-		Wend
-		Return parent
+		If parent
+			While parent._parent
+				parent = parent._parent
+			Wend
+			Return parent
+		EndIf
+		Return Self
 	EndMethod
 
 	Method _removeChild(child:tobject)
@@ -1009,7 +1204,7 @@ Type tobject
 	EndMethod
 	
 	Method rotateTo(x:Float, y:Float, z:Float)
-		_rotx = x; _roty = y; _rotz =z
+		_rotx = x; _roty = y; _rotz = z
 	EndMethod
 
 	Method update(timeMs:Int)
@@ -1030,10 +1225,70 @@ Type tobject
 	EndMethod
 	
 	Method updatelocal()
-		math.rotationxyzm4(_rotx, _roty, _rotz, _local)
+		Local qXw:Float = Cos(_rotX * 0.5)
+		Local qXx:Float = Sin(_rotX * 0.5)
+		Local qYw:Float = Cos(_rotY * 0.5)
+		Local qYy:Float = Sin(_rotY * 0.5)
+		Local qZw:Float = Cos(_rotZ * 0.5)
+		Local qZz:Float = Sin(_rotZ * 0.5)
+
+		' qX * qY
+		Local qW:Float = qXw * qYw
+		Local qX:Float = qXx * qYw
+		Local qY:Float = qXw * qYy
+		Local qZ:Float = qXx * qYy
+		
+		' ( qX * qY ) * qZ
+		Local W:Float =  qw * qZw - qz * qZz
+		Local X:Float =  qx * qZw + qy * qZz
+		Local Y:Float = -qx * qZz + qy * qZw
+		Local Z:Float =  qw * qZz + qz * qZw
+
+		math.quaternionTom4(x, y, z, w, _local)
 		_local[3] = _posx
 		_local[7] = _posy
 		_local[11] = _posz		
+	EndMethod
+	
+	Method setColour(r:Float, g:Float, b:Float, a:Float)
+		_colour[0] = r; _colour[1] = g; _colour[2] = b; _colour[3] = a
+	EndMethod
+	
+	Method renderSolid(context:ID3D11DeviceContext)
+		If _renderflag & RENDERFLAG_SOLID
+			' everything rendered solid is black
+			Local root:tobject = getRoot()
+			Local game:tgame = tgame(root._extra)
+			
+			Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
+			context.Map(game._psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+			MemCopy(map.pData, [0.0, 0.0, 0.0, 1.0], 16)
+			context.Unmap(game._psConstants, 0)
+
+			render(context)
+		EndIf
+
+		For Local obj:tobject = EachIn _children
+			obj.renderSolid(context)
+		Next
+	EndMethod
+	
+	Method renderWireframe(context:ID3D11DeviceContext)
+		If _renderflag & RENDERFLAG_WIREFRAME
+			Local root:tobject = getRoot()
+			Local game:tgame = tgame(root._extra)
+			
+			Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
+			context.Map(game._psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+			MemCopy(map.pData, _colour, 16)
+			context.Unmap(game._psConstants, 0)
+			
+			render(context)
+		EndIf
+		
+		For Local obj:tobject = EachIn _children
+			obj.renderWireframe(context)
+		Next
 	EndMethod
 	
 	Method render(context:ID3D11DeviceContext)
@@ -1052,10 +1307,6 @@ Type tobject
 			context.IASetPrimitiveTopology(_topology)
 			context.DrawIndexed(_indexCount, 0, 0)
 		EndIf
-		
-		For Local obj:tobject = EachIn _children
-			obj.render(context)
-		Next
 	EndMethod
 	
 	Method addAnimator(animator:tAnimator)
@@ -1083,11 +1334,11 @@ EndType
 
 Type tIntroAnimator Extends tAnimator
 	Method animate(obj:tobject, timeMs:Int)
-		If KeyDown(KEY_1)
+		If KeyDown(KEY_SPACE)
 			FlushKeys()
 			
-			Local scene:tobject = obj.getScene()
-			Local game:tGame = tGame(scene._extra)
+			Local root:tobject = obj.getroot()
+			Local game:tGame = tGame(root._extra)
 			game._gamestate = 1
 			
 			game._pressToStart.setParent(Null)
@@ -1150,12 +1401,12 @@ Type tShipAnimator Extends tanimator
 	
 	Method animate(obj:tObject, timeMs:Int)
 		Local st:Float = 5
-		If KeyDown(KEY_LEFT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz + st)
-		If KeyDown(KEY_RIGHT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz - st)
+		If KeyDown(KEY_LEFT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz - st)
+		If KeyDown(KEY_RIGHT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz + st)
 			
 		' adjust  some thrust
 		If KeyDown(KEY_UP)
-			_velx :+ 0.01 * -Sin(obj._rotz)
+			_velx :+ 0.01 * Sin(obj._rotz)
 			_vely :+ 0.01 * Cos(obj._rotz)
 			
 			_velx = Max(-0.6, Min(_velx, 0.6))
@@ -1174,11 +1425,11 @@ Type tShipAnimator Extends tanimator
 		obj.moveTo(posx, posy, posz)
 
 		If KeyHit(KEY_SPACE)
-			Local scene:tobject = obj.getScene()
-			Local game:tgame = tgame(scene._extra)
+			Local root:tobject = obj.getroot()
+			Local game:tgame = tgame(root._extra)
 
 			If Not game._bulletstore.isempty()
-				Local velx:Float = -Sin(obj._rotz)
+				Local velx:Float = Sin(obj._rotz)
 				Local vely:Float = Cos(obj._rotz)
 				Local bullet:tobject = game.getBullet()
 				If bullet
@@ -1186,7 +1437,7 @@ Type tShipAnimator Extends tanimator
 					animator.init(velx, vely, 0.0, 500, timeMs)
 		
 					bullet.addAnimator(animator)
-					bullet.setParent(scene)
+					bullet.setParent(game._gui)
 					bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
 					bullet.setCollisionResponder(New tBulletToRockResponder)
 				EndIf
@@ -1223,13 +1474,55 @@ Type tbulletAnimator Extends tanimator
 		obj.moveTo(posx, posy, posz)
 			
 		If timeMs > _spawnTimeMs + _lifeTimeMs
-			Local scene:tobject = obj.getScene()
-			Local game:tgame = tgame(scene._extra)
+			Local root:tobject = obj.getroot()
+			Local game:tgame = tgame(root._extra)
 			
 			obj._animators.clear()
 			obj.setParent(Null)
 			game.returnBullet(obj)
 		EndIf
+	EndMethod
+EndType
+
+Type tRotationAnimator Extends tAnimator
+	Field _rotx:Float
+	Field _roty:Float
+	Field _rotz:Float
+	
+	Method init(rotx:Float, roty:Float, rotz:Float)
+		_rotx = rotx
+		_roty = roty
+		_rotz = rotz
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._rotz + _rotz)
+	EndMethod
+EndType
+
+Type tVelocityAnimator Extends tAnimator
+	Field _velx:Float
+	Field _vely:Float
+	Field _velz:Float
+
+	Method init(velx:Float, vely:Float, velz:Float)
+		_velx = velx
+		_vely = vely
+		_velz = velz
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		Local posx:Float = obj._posx
+		Local posy:Float = obj._posy
+		Local posz:Float = obj._posz
+		posx :+ _velx; posy :+ _vely; posz :+ _velz
+		
+		If posy < -18.0 posy = 18.0
+		If posy > 18 posy = -18.0
+		If posx < -30 posx = 30
+		If posx > 30 posx = -30
+		
+		obj.moveTo(posx, posy, posz)
 	EndMethod
 EndType
 
@@ -1300,8 +1593,8 @@ Type tParticleAnimator Extends tAnimator
 		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._posz + _rotz)
 
 		If timeMs > _spawnTimeMs + _lifeTimeMs
-			Local scene:tobject = obj.getScene()
-			Local game:tgame = tgame(scene._extra)
+			Local root:tobject = obj.getroot()
+			Local game:tgame = tgame(root._extra)
 			
 			obj._animators.clear()
 			obj.setParent(Null)
@@ -1319,8 +1612,8 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		Local bullet:tobject = collisionData._src
 		Local rock:tobject = collisionData._dst
 		
-		Local scene:tobject = rock.getScene()
-		Local game:tgame = tgame(scene._extra)
+		Local root:tobject = rock.getroot()
+		Local game:tgame = tgame(root._extra)
 		Local size:Int = tobjectrock(rock)._size - 1
 
 		' remove the bullet
@@ -1339,15 +1632,15 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		Local posz:Float = rock._posz
 
 		Local epicentre:tobject = New tobject
-		epicentre.setparent(scene)
-				
+		epicentre.setparent(game._scene)
+
 		For Local i:Int = 0 Until 32
 			Local particleanim:tParticleAnimator = New tParticleAnimator
 			particleanim.init(Rnd(-0.5,0.5), Rnd(-0.5,0.5), 0.0, 0.0, 0.0, 0.0, collisionData._timeMs, 800)
 			
 			Local particle:tobject = game.getParticle()
 			If particle
-				particle.setParent(scene)
+				particle.setParent(game._gui)
 				particle.moveTo(posx, posy, posz)
 				particle.addAnimator(particleanim)
 			EndIf
@@ -1355,11 +1648,11 @@ Type tBulletToRockResponder Extends tCollisionResponder
 			
 		' split the rock into 2
 		If size <> 0
-			For Local i:Int = 0 Until 2
+			For Local i:Int = 0 Until 3
 				Local rock:tobjectrock = tobjectrock(game.getRock(size))
 				If rock
 					rock.moveTo(posx, posy, posz)
-					rock.setparent(scene)
+					rock.setparent(game._gui)
 				
 					Local rockanim:tRockAnimator = New tRockAnimator
 					rockanim.init(Rnd(-0.1, 0.1), Rnd(-0.1, 0.1), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
@@ -1390,6 +1683,7 @@ Type tCollision
 		_src = src
 		_dst = dst
 		_timeMs = timeMs
+
 		Return Self
 	EndMethod
 EndType
@@ -1412,34 +1706,9 @@ Type tCollisionManager Extends tAnimator
 	Method animate(obj:tobject, timeMs:Int)
 		_collisions.clear()
 
-		For Local colliderType:tCollisionType = EachIn _collisionTypes
+		For Local collisionType:tCollisionType = EachIn _collisionTypes
 			For Local src:tObject = EachIn obj._children
-				If src._collisionId <> colliderType._src Continue
-				
-				For Local dst:tobject = EachIn obj._children
-					If dst._collisionId <> colliderType._dest Continue
-					
-					' hmm choose type of collision detection to use? simple spheres at the mo
-					Local srcPosx:Float = src._posx
-					Local srcPosy:Float = src._posy
-					Local srcPosz:Float = src._posz
-					
-					Local dstPosx:Float = dst._posx
-					Local dstPosy:Float = dst._posy
-					Local dstPosz:Float = dst._posz
-
-					' get the distance from src to dst
-					Local dx:Float = dstPosx - srcPosx
-					Local dy:Float = dstPosy - srcPosy
-					Local dz:Float = dstPosz - srcPosz
-					
-					Local dist:Float = dx *dx + dy * dy + dz *dz
-					
-					Local radii:Float = (src._collisionRadius + dst._collisionRadius)
-					radii :* radii
-
-					If radii > dist _collisions.addLast(New tCollision.Create(src, dst, timeMs))
-				Next
+				checkCollisions(src, collisionType, timeMs)
 			Next
 		Next
 
@@ -1447,6 +1716,37 @@ Type tCollisionManager Extends tAnimator
 			If collision._src._collisionResponder
 				collision._src._collisionResponder.collisionWith(collision)
 			EndIf
+		Next
+	EndMethod
+	
+	Method checkcollisions(obj:tobject, collisionType:tCollisionType, timeMs:Int)
+		For Local src:tObject = EachIn obj._children
+			If src._collisionId <> collisionType._src Continue
+			
+			For Local dst:tobject = EachIn obj._children
+				If dst._collisionId <> collisionType._dest Continue
+				
+				' hmm choose type of collision detection to use? simple spheres at the mo
+				Local srcPosx:Float = src._posx
+				Local srcPosy:Float = src._posy
+				Local srcPosz:Float = src._posz
+				
+				Local dstPosx:Float = dst._posx
+				Local dstPosy:Float = dst._posy
+				Local dstPosz:Float = dst._posz
+
+				' get the distance from src to dst
+				Local dx:Float = dstPosx - srcPosx
+				Local dy:Float = dstPosy - srcPosy
+				Local dz:Float = dstPosz - srcPosz
+				
+				Local dist:Float = dx * dx + dy * dy + dz *dz
+
+				Local radii:Float = (src._collisionRadius + dst._collisionRadius)
+				radii :* radii
+
+				If radii > dist _collisions.addLast(New tCollision.Create(src, dst, timeMs))
+			Next
 		Next
 	EndMethod
 EndType
