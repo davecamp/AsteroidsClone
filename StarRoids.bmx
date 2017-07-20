@@ -4,6 +4,71 @@ Strict
 Import pub.win32
 Import srs.directx11
 
+Global ship:String
+ship :+ "linestrip~n"
+ship :+ "v -0.5 -0.8 0.0~n"
+ship :+ "v 0.0 0.8 0.0~n"
+ship :+ "v 0.5 -0.8 0.0~n"
+ship :+ "v 0.25 -0.5 0.0~n"
+ship :+ "v -0.25 -0.5 0.0~n"
+ship :+ "f 0 1 2 3 4 0"
+
+Global bullet:String
+bullet :+ "linelist~n"
+bullet :+ "v -0.03 -0.03 0.0~n"
+bullet :+ "v -0.03 0.03 0.0~n"
+bullet :+ "v 0.03 0.03 0.0~n"
+bullet :+ "v 0.03 -0.03 0.0~n"
+bullet :+ "f 0 1 2 3 0~n"
+
+Type tAsteroid	
+	Method Create:String()
+		Local t:Float = (1.0 + Sqr(5.0)) / 2.0
+		
+		Local meshdata:String = "trianglelist~n"
+		meshdata :+ "v -1.0 " + t + " 0.0~n"
+		meshdata :+ "v 1.0 " + t + " 0.0~n"
+		meshdata :+ "v -1.0 " + -t + " 0.0~n"
+		meshdata :+ "v 1.0 " + -t + " 0.0~n"
+
+		meshdata :+ "v 0.0 -1.0 " + t + "~n"
+		meshdata :+ "v 0.0 1.0 " + t + "~n"
+		meshdata :+ "v 0.0 -1.0 " + -t + "~n"
+		meshdata :+ "v 0.0 1.0 " + -t + "~n"
+
+		meshdata :+ "v " + t + " 0.0 -1.0~n"
+		meshdata :+ "v " + t + " 0.0 1.0~n"
+		meshdata :+ "v " + -t + " 0.0 -1.0~n"
+		meshdata :+ "v " + -t + " 0.0 1.0~n"
+
+		meshdata :+ "f 0 11 5~n"
+		meshdata :+ "f 0 5 1~n"
+		meshdata :+ "f 0 1 7~n"
+		meshdata :+ "f 0 7 10~n"
+		meshdata :+ "f 0 10 11~n"
+		
+		meshdata :+ "f 1 5 9~n"
+		meshdata :+ "f 5 11 4~n"
+		meshdata :+ "f 11 10 2~n"
+		meshdata :+ "f 10 7 6~n"
+		meshdata :+ "f 7 1 8~n"
+		
+		meshdata :+ "f 3 9 4~n"
+		meshdata :+ "f 3 4 2~n"
+		meshdata :+ "f 3 2 6~n"
+		meshdata :+ "f 3 6 8~n"
+		meshdata :+ "f 3 8 9~n"
+		
+		meshdata :+ "f 4 9 5~n"
+		meshdata :+ "f 2 4 11~n"
+		meshdata :+ "f 6 2 10~n"
+		meshdata :+ "f 8 6 7~n"
+		meshdata :+ "f 9 8 1"
+
+		Return meshdata
+	EndMethod
+EndType
+
 Type tGlyph
 	Field _indices:Int[]
 	Field _bufferStartLocation:Int
@@ -18,21 +83,21 @@ Type tFont
 	Field _glyphs:tGlyph[36]
 	
 	Field _vertices:Float[] =..
-				 [ -0.47, -1.0, 0.0,..
-		           -0.47, -0.7, 0.0,..
-		           -0.47,  0.0, 0.0,..
-	               -0.47,  0.7, 0.0,..
-		           -0.47,  1.0, 0.0,..
-		             0.0, -1.0, 0.0,..
-		             0.0, -0.7, 0.0,..
+				 [ -0.4, -0.8, 0.0,..
+		           -0.4, -0.3, 0.0,..
+		           -0.4,  0.0, 0.0,..
+	               -0.4,  0.3, 0.0,..
+		           -0.4,  0.8, 0.0,..
+		             0.0, -0.8, 0.0,..
+		             0.0, -0.3, 0.0,..
 		             0.0,  0.0, 0.0,..
-				     0.0,  0.7, 0.0,..
-		             0.0,  1.0, 0.0,..
-		            0.47, -1.0, 0.0,..
-		            0.47, -0.7, 0.0,..
-                    0.47,  0.0, 0.0,..
-		            0.47,  0.7, 0.0,..
-		            0.47,  1.0, 0.0 ]
+				     0.0,  0.3, 0.0,..
+		             0.0,  0.8, 0.0,..
+		            0.4, -0.8, 0.0,..
+		            0.4, -0.3, 0.0,..
+                    0.4,  0.0, 0.0,..
+		            0.4,  0.3, 0.0,..
+		            0.4,  0.8, 0.0 ]
 
 	Method New()
 		Rem vertices
@@ -54,71 +119,87 @@ Type tFont
 		 ' LINELIST
 
 		' 0 to 10
-		_glyphs[0] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0])
-		_glyphs[1] = New tGlyph.Create([5, 9])
-		_glyphs[2] = New tGlyph.Create([4, 14, 14, 11, 11, 1, 1, 0, 0, 10])
-		_glyphs[3] = New tGlyph.Create([4, 14, 14, 12, 12, 1, 1, 11, 11, 10, 10, 0])
-		_glyphs[4] = New tGlyph.Create([4, 1, 1, 11, 11, 10, 10, 14])
-		_glyphs[5] = New tGlyph.Create([14, 4, 4, 1, 1, 11, 11, 10, 10, 0])
-		_glyphs[6] = New tGlyph.Create([4, 0, 0, 10, 10, 11, 11, 1])
-		_glyphs[8] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0, 0, 10, 10, 11, 11, 1])
-		_glyphs[9] = New tGlyph.Create([10, 14, 14, 4, 4, 1, 1, 11])
+		_glyphs[0] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0])          ' 0
+		_glyphs[1] = New tGlyph.Create([5, 9])                                ' 1
+		_glyphs[2] = New tGlyph.Create([4, 14, 14, 11, 11, 1, 1, 0, 0, 10])   ' 2
+		_glyphs[3] = New tGlyph.Create([4, 14, 14, 10, 10, 0, 11, 1])         ' 3
+		_glyphs[4] = New tGlyph.Create([4, 1, 1, 11, 10, 14])                 ' 4
+		_glyphs[5] = New tGlyph.Create([14, 4, 4, 1, 1, 11, 11, 10, 10, 0])   ' 5
+		_glyphs[6] = New tGlyph.Create([4, 0, 0, 10, 10, 11, 11, 1])          ' 6
+		_glyphs[7] = New tGlyph.Create([4, 14, 14, 10])                       ' 7
+		_glyphs[8] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0, 1, 11])   ' 8
+		_glyphs[9] = New tGlyph.Create([10, 14, 14, 4, 4, 1, 1, 11])          ' 9
 
 		' A to Z
-		_glyphs[10] = New tGlyph.Create([0, 1, 1, 9, 9, 12, 12, 10, 10, 11, 11, 1])  ' A
-		_glyphs[11] = New tGlyph.Create([0, 4, 4, 9, 9, 13, 13, 7, 7, 2, 2, 7, 7, 11, 11, 5, 5, 0])  ' B
-		_glyphs[12] = New tGlyph.Create([10, 0, 0, 4, 4, 14])                        ' C
-		_glyphs[13] = New tGlyph.Create([0, 4, 4, 9, 9, 13, 13, 11, 11, 5, 5, 0])    ' D
-		_glyphs[14] = New tGlyph.Create([10, 0, 0, 2, 2, 7, 7, 2, 2, 4, 4, 14])      ' E
-		_glyphs[15] = New tGlyph.Create([0, 2, 2, 7, 7, 2, 2, 4, 4, 14])             ' F
-		_glyphs[16] = New tGlyph.Create([13, 13, 13, 4, 4, 0, 0, 10, 10, 11, 11, 6]) ' G
-		_glyphs[17] = New tGlyph.Create([0, 4, 4, 1, 1, 11, 11, 10, 10, 13])     ' H
-		_glyphs[18] = New tGlyph.Create([4, 14, 14, 9, 9, 5, 5, 0, 0, 10])       ' I
-		_glyphs[19] = New tGlyph.Create([4, 14, 14, 10, 10, 5, 5, 1])            ' J
-		_glyphs[20] = New tGlyph.Create([0, 4, 4, 1, 1, 14, 14, 1, 1, 10])       ' K
-		_glyphs[21] = New tGlyph.Create([4, 0, 0, 10])                           ' L
-		_glyphs[22] = New tGlyph.Create([0, 4, 4,  8, 8, 14, 14, 10])            ' M
-		_glyphs[23] = New tGlyph.Create([0, 4, 4, 10, 10, 14])                   ' N
-		_glyphs[24] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0])            ' O
-		_glyphs[25] = New tGlyph.Create([0, 4, 4, 14, 14, 13, 14, 3])            ' P
+		_glyphs[10] = New tGlyph.Create([0, 1, 1, 9, 9, 11, 11, 10, 1, 11])       ' A
+		_glyphs[11] = New tGlyph.Create([0, 4, 4, 9, 9, 13, 13, 7, 7, 11, 11, 5, 5, 0, 2, 7])  ' B
+		_glyphs[12] = New tGlyph.Create([10, 0, 0, 4, 4, 14])                     ' C
+		_glyphs[13] = New tGlyph.Create([0, 4, 4, 9, 9, 13, 13, 11, 11, 5, 5, 0]) ' D
+		_glyphs[14] = New tGlyph.Create([10, 0, 0, 4, 4, 14, 1, 6])               ' E
+		_glyphs[15] = New tGlyph.Create([0, 4, 4, 14, 2, 7])                      ' F
+		_glyphs[16] = New tGlyph.Create([14, 4, 4, 0, 0, 10, 10, 11, 11, 6])      ' G
+		_glyphs[17] = New tGlyph.Create([0, 4, 10, 14, 1, 11])                    ' H
+		_glyphs[18] = New tGlyph.Create([4, 14, 0, 10, 5, 9])                     ' I
+		_glyphs[19] = New tGlyph.Create([4, 14, 14, 10, 10, 5, 5, 1])             ' J
+		_glyphs[20] = New tGlyph.Create([0, 4, 1, 14, 1, 10])                     ' K
+		_glyphs[21] = New tGlyph.Create([4, 0, 0, 10])                            ' L
+		_glyphs[22] = New tGlyph.Create([0, 4, 4,  8, 8, 14, 14, 10])             ' M
+		_glyphs[23] = New tGlyph.Create([0, 4, 4, 10, 10, 14])                    ' N
+		_glyphs[24] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0])             ' O
+		_glyphs[25] = New tGlyph.Create([0, 4, 4, 14, 14, 13, 13, 3])             ' P
 		_glyphs[26] = New tGlyph.Create([0, 4, 4, 14, 14, 11, 11, 5, 5, 0, 6, 10]) ' Q
-		_glyphs[27] = New tGlyph.Create([0, 4, 4, 14, 14, 12, 12, 2, 2, 10])     ' R
-		_glyphs[28] = New tGlyph.Create([14, 4, 4, 1, 1, 11, 11, 10, 10, 0])     ' S
-		_glyphs[29] = New tGlyph.Create([5, 9, 9, 4, 4, 14])                     ' T
-		_glyphs[30] = New tGlyph.Create([4, 0, 0, 10, 10, 14])                   ' U
-		_glyphs[31] = New tGlyph.Create([4, 5, 5, 14])                           ' V
-		_glyphs[32] = New tGlyph.Create([4, 0, 0, 6, 6, 10, 10, 14])             ' W
-		_glyphs[33] = New tGlyph.Create([4, 7, 7, 14, 14, 0, 0, 7, 7, 10])       ' X
-		_glyphs[34] = New tGlyph.Create([5, 8, 8, 4, 4, 8, 8, 13])               ' Y
-		_glyphs[35] = New tGlyph.Create([4, 14, 14, 0, 0, 10])                   ' Z
+		_glyphs[27] = New tGlyph.Create([0, 4, 4, 14, 14, 11, 11, 1, 1, 10])      ' R
+		_glyphs[28] = New tGlyph.Create([14, 4, 4, 1, 1, 11, 11, 10, 10, 0])      ' S
+		_glyphs[29] = New tGlyph.Create([5, 9, 4, 14])                            ' T
+		_glyphs[30] = New tGlyph.Create([4, 0, 0, 10, 10, 14])                    ' U
+		_glyphs[31] = New tGlyph.Create([4, 5, 5, 14])                            ' V
+		_glyphs[32] = New tGlyph.Create([4, 0, 0, 6, 6, 10, 10, 14])              ' W
+		_glyphs[33] = New tGlyph.Create([4, 10, 0, 14])                           ' X
+		_glyphs[34] = New tGlyph.Create([4, 8, 8, 14, 8, 5])                      ' Y
+		_glyphs[35] = New tGlyph.Create([4, 14, 14, 0, 0, 10])                    ' Z
 	EndMethod
 	
 	Method asciiToData:Int(inAsc:Int)
 		If inAsc >= 48 And inAsc <= 57 Return inAsc - 48        ' 0 to 9
 		If inAsc >= 65 And inAsc <= 90 Return inAsc - 65 + 10   ' A to Z
+		If inAsc >= 97 And inAsc <= 127 Return inAsc - 97 + 10
 	EndMethod
 	
-	Method createSentence:tobject(device:ID3D11Device, sentence:String, parent:tobject)
+	Method createSentence:tmesh(sentence:String)
 		Local mesh:tmesh = New tmesh
-		mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
-		
+		mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST
+
+		Local x:Float, y:Float
 		For Local i:Int = 0 Until sentence.length
+			If sentence[i] <= 32
+				x :+ 1
+				
+				If sentence[i] = 10 
+					y :- 2 ' minus to go down in the 3d world
+					x = 0
+				EndIf
+				
+				Continue
+			EndIf
+				
 			Local glyphIndex:Int = asciiToData(sentence[i])
 			Local glyph:tglyph = _glyphs[glyphIndex]
 			
 			For Local index:Int = EachIn glyph._indices
 				' use i as an offset to push each letter to the right
-				Local vertex:Float[] = [ _vertices[index * 3 + 0] + i, _vertices[index * 3 + 1], _vertices[index * 3 + 2] ]
+				Local vertex:Float[] = [ _vertices[index * 3 + 0] + x + 0.5, _vertices[index * 3 + 1] + y + 0.5, _vertices[index * 3 + 2] ]
 				mesh._vertices :+ vertex
 			Next
+			
+			x :+ 1
 		Next
 		
 		mesh._indices = New Int[mesh._vertices.length]
 		For Local index:Int = 0 Until mesh._indices.length
 			mesh._indices[index] = index
 		Next
-
-		Return New tObject.Create(device, mesh, parent)
+		
+		Return mesh
 	EndMethod
 EndType	
 
@@ -175,6 +256,10 @@ Type math
 		inout[11] = 0.0
 		inout[12] = 0.0; inout[13] = 0.0; inout[14] = 0.0; inout[15] = 1.0
 	EndFunction
+	
+	Function lerp:Float(a:Float, b:Float, t:Float)
+		Return a + (b - a) * t
+	EndFunction 
 EndType
 
 Type tWindow
@@ -377,36 +462,85 @@ Type tGame
 	Field _model:Float[16]
 	
 	Field _scene:tobject
+	Field _ship:tobject
 	Field _rocks:TList
 	
 	Field _font:tFont
-	Field _text:tobject
+	Field _copyright:tobject
+
+	Field _bullets:TList
 
 	Method init(Width:Int, Height:Int)
+		_bullets = New TList
 		_rocks = New TList
 		_scene = New tobject
+		
+		_scene.setExtra(Self)
 
 		_window = New TWindow.Create(Width, Height)
 		_pipeline = New TGpuD3D11.Create(Width, Height, _window.getWindowHandle())
+	
+		_view = [1.0, 0.0, 0.0, 0.0,..
+		         0.0, 1.0, 0.0, 0.0,..
+				 0.0, 0.0, 1.0, 60.0,..
+				 0.0, 0.0, 0.0, 1.0]
 		
 		createShaderResources()
 		createGameObjects()
-		
-		_view = [1.0, 0.0, 0.0, 0.0,..
-		         0.0, 1.0, 0.0, 0.0,..
-				 0.0, 0.0, 1.0, 5.0,..
-				 0.0, 0.0, 0.0, 1.0]
 	EndMethod
 	
 	Method createGameObjects()
 		_font = New tFont
-		_text = _font.createSentence(_pipeline._device, "Test", _scene)
+		
+		' create copyright for atari
+		_copyright = New tobject
+		_copyright.setparent(_scene)
+		_copyright.moveTo(0, -15, 0)
+		
+		Local msg:String = "original game by atari inc 1979"
+		Local textmesh:tmesh = _font.createSentence(msg)
+		'textmesh.scale(0.5, 0.5, 0.5)
+		Local text:tobject = New tObject.Create(_pipeline._device, textmesh, _copyright)
+		text.moveto( -Float(msg.length)/2, -.5, 0)
+
+		Local textRoller:tRollAnimator = New tRollAnimator
+		textRoller.init(5000, 3000, MilliSecs())
+		_copyright.addAnimator(textRoller)
+		
+		' create ship
+		Local shipmesh:tmesh = parsemeshdata(ship)
+		shipmesh.scale(0.7, 0.7, 0.7)
+		_ship = New tobject.Create(_pipeline._device, shipmesh, _scene)
+		_ship.setName("ship")
+		Local shipAnimator:tShipAnimator = New tShipAnimator
+		_ship.addAnimator(shipAnimator)
+		
+		' create rocks
+		For Local i:Int = 0 Until 10
+			Local bullet:tobject = New tobject.Create(_pipeline._device, parsemeshdata(bullet), Null)
+			_bullets.addlast(bullet)
+		Next
+		
+		createRocks()
+	EndMethod
+	
+	Method createRocks()
+		Local rockdata:String = New tasteroid.Create()
+		Local rockmesh:tmesh = parsemeshdata(rockdata)
+		'rockmesh.scale(0.5, 0.5, 0.5)
+		
+		Local rock:tobject = New tobject.Create(_pipeline._device, rockmesh, _scene)
+		Local rockanim:tRockAnimator = New tRockAnimator
+		
+		SeedRnd(MilliSecs())
+		rockanim.init(Rnd(-0.1, 0.1), Rnd(-0.1, 0.1), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+		rock.addAnimator(rockanim)
 	EndMethod
 	
 	Method parsemeshdata:tmesh(data:String)
 		Local lines:String[] = data.split("~n")
 		Local mesh:tmesh = New tmesh
-		
+
 		For Local line:String = EachIn lines
 			Local comp:String[] = line.split(" ")
 
@@ -556,7 +690,7 @@ Type tGame
 		_pipeline.setWireframeOn()
 		_pipeline._context.IASetInputLayout(_inputLayout)
 
-		set3DProjection(60.0, 1200.0 / 700.0, 0.1, 1000.0)
+		set3DProjection(30.0, 1200.0 / 700.0, 0.1, 1000.0)
 
 		While Not AppTerminate()
 			Select _gamestate
@@ -571,18 +705,15 @@ Type tGame
 	EndMethod
 	
 	Method updategame()
-		updategamelogic
+		updategamelogic(MilliSecs())
+		
 		rendergame()
 	EndMethod
 
-	Method updategamelogic()
+	Method updategamelogic(timeMs:Int)
 		If KeyDown(KEY_ESCAPE) _gamestate = -1
-		
-		For Local obj:tobject = EachIn _rocks
-			obj.rotateTo(0.0, 0.0, obj._rotz + 0.5)
-		Next
 
-		_scene.update()
+		_scene.update(timeMs:Int)
 	EndMethod
 	
 	Method rendergame()
@@ -614,12 +745,25 @@ Type tmesh
 	Field _topology:Int
 	Field _vertices:Float[]
 	Field _indices:Int[]
+	
+	Method scale(x:Float, y:Float, z:Float)
+		For Local i:Int = 0 Until _vertices.length Step 3
+			_vertices[i + 0] = _vertices[i + 0] * x
+			_vertices[i + 1] = _vertices[i + 1] * y
+			_vertices[i + 2] = _vertices[i + 2] * z
+		Next
+	EndMethod
 EndType
 
 Type tobject
 	Field _parent:tobject
-	Field _children:TList
+	Field _extra:Object
 
+	Field _children:TList
+	Field _name:String
+
+	Field _animators:TList
+	
 	Field _rotx:Float, _roty:Float, _rotz:Float
 	Field _posx:Float, _posy:Float, _posz:Float
 	Field _local:Float[16]
@@ -633,6 +777,7 @@ Type tobject
 	Field _topology:Int
 
 	Method New()
+		_animators = New TList
 		_children = New TList
 		math.identitym4(_local)
 		math.identitym4(_world)
@@ -669,12 +814,19 @@ Type tobject
 		device.createBuffer(desc, Null, _worldBuffer)
 		If Not _worldBuffer DebugLog " cannot create world constant buffer"
 
-		setParent(parent)
-
 		_indexCount = mesh._indices.length
 		_topology = mesh._topology
 		
+		setParent(parent)		
 		Return Self
+	EndMethod
+	
+	Method getScene:tobject()
+		Local parent:tobject = _parent
+		While parent._parent
+			parent = parent._parent
+		Wend
+		Return parent
 	EndMethod
 
 	Method _removeChild(child:tobject)
@@ -685,6 +837,10 @@ Type tobject
 		If Not _children.contains(child) _children.addlast(child)
 	EndMethod
 
+	Method setName(name:String)
+		_name = name
+	EndMethod
+
 	Method setParent(parent:tobject)
 		If _parent _parent._removeChild(Self)
 		If parent parent._addchild(Self)
@@ -692,6 +848,10 @@ Type tobject
 		_parent = parent
 	EndMethod
 	
+	Method setExtra(extra:Object)
+		_extra = extra
+	EndMethod
+
 	Method moveTo(x:Float, y:Float, z:Float)
 		_posx = x; _posy = y; _posz = z
 	EndMethod
@@ -700,7 +860,10 @@ Type tobject
 		_rotx = x; _roty = y; _rotz =z
 	EndMethod
 
-	Method update()
+	Method update(timeMs:Int)
+		For Local anim:tanimator = EachIn _animators
+			anim.animate(Self, timeMs)
+		Next
 		updatelocal()
 
 		If _parent
@@ -710,7 +873,7 @@ Type tobject
 		EndIf
 		
 		For Local obj:tobject = EachIn _children
-			obj.update()
+			obj.update(timeMs)
 		Next
 	EndMethod
 	
@@ -742,8 +905,189 @@ Type tobject
 			obj.render(context)
 		Next
 	EndMethod
+	
+	Method addAnimator(animator:tAnimator)
+		_animators.addlast(animator)
+	EndMethod
+	
+	Method removeAnimator(animator:tAnimator)
+		For Local anim:tanimator = EachIn _animators
+			If animator = anim _animators.remove(animator)
+		Next
+	EndMethod
 EndType
 
+Type tanimator
+	Method animate(obj:tobject, timeMs:Int) Abstract
+EndType
+
+Type tRollAnimator Extends tanimator
+	Field _lastTimeMs:Int
+	Field _nextTimeMs:Int
+	Field _timeToRollMs:Int
+	Field _timeToWaitMs:Int
+	Field _state:Int				' 0 is idle, 1 is rotating
+
+	Method init(waitTimeMs:Int, timeToRollMs:Int, initTimeMs:Int)
+		_timeToWaitMs = waitTimeMs
+		_timeToRollMs = timeToRollMs
+		
+		_lastTimeMs = initTimeMs
+		_nextTimeMs:Int = _lastTimeMs + _timeToRollMs
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		Local time:Int = timeMs - _lastTimeMs
+		Select _state
+		Case 0
+			If timeMs >= _lastTimeMs + _timeToWaitMs
+				_state = 1
+				_nextTimeMs :+ _timeToRollMs
+				_lastTimeMs = timeMs
+			EndIf
+		
+		Case 1
+			' standard lerp
+			Local t:Float = (timeMs - _lastTimeMs) / Float(_timeToRollMs)
+			Local ang:Float = math.lerp(0.0, 360.0, t)
+			obj.rotateTo(ang, 0, 0)
+			
+			If time  > _timeToRollMs
+				obj.rotateTo(0, 0, 0)
+				_lastTimeMs = timeMs
+				_state = 0
+			EndIf
+
+		EndSelect
+	EndMethod
+EndType
+
+Type tShipAnimator Extends tanimator
+	Field _velx:Float
+	Field _vely:Float
+	Field _velz:Float
+	
+	Method animate(obj:tObject, timeMs:Int)
+		Local st:Float = 5
+		If KeyDown(KEY_LEFT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz + st)
+		If KeyDown(KEY_RIGHT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz - st)
+			
+		' adjust  some thrust
+		If KeyDown(KEY_UP)
+			_velx :+ 0.01 * -Sin(obj._rotz)
+			_vely :+ 0.01 * Cos(obj._rotz)
+			
+			_velx = Max(-0.6, Min(_velx, 0.6))
+			_vely = Max(-0.6, Min(_vely, 0.6))
+		EndIf
+		
+		Local posx:Float = obj._posx
+		Local posy:Float = obj._posy
+		Local posz:Float = obj._posz
+		posx :+ _velx; posy :+ _vely; posz :+ _velz
+		
+		If posy < -18.0 posy = 18.0
+		If posy > 18 posy = -18.0
+		If posx < -30 posx = 30
+		If posx > 30 posx = -30
+		obj.moveTo(posx, posy, posz)
+
+		If KeyHit(KEY_SPACE)
+			Local scene:tobject = obj.getScene()
+			Local game:tgame = tgame(scene._extra)
+
+			If game
+				If Not game._bullets.isempty()
+					Local velx:Float = -Sin(obj._rotz)
+					Local vely:Float = Cos(obj._rotz)
+					Local bullet:tobject = tobject(game._bullets.removefirst())
+
+					Local animator:tBulletAnimator = New tBulletAnimator
+					animator.init(velx, vely, 0.0, 500, timeMs)
+
+					bullet.addAnimator(animator)
+					bullet.setParent(scene)
+					bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
+					'bullet.update(timeMs)
+				EndIf
+			EndIf
+		EndIf	
+	EndMethod
+EndType
+
+Type tbulletAnimator Extends tanimator
+	Field _velx:Float
+	Field _vely:Float
+	Field _velz:Float
+	Field _lifeTimeMs:Int
+	Field _spawnTimeMs:Int
+
+	Method init(velx:Float, vely:Float, velz:Float, lifeTimeMs:Int, spawnTimeMs:Int)
+		_velx = velx
+		_vely = vely
+		_velz = velz
+		_lifeTimeMs = lifeTimeMs
+		_spawnTimeMs = spawnTimeMs
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		Local posx:Float = obj._posx
+		Local posy:Float = obj._posy
+		Local posz:Float = obj._posz
+		posx :+ _velx; posy :+ _vely; posz :+ _velz
+		
+		If posy < -18.0 posy = 18.0
+		If posy > 18 posy = -18.0
+		If posx < -30 posx = 30
+		If posx > 30 posx = -30
+		obj.moveTo(posx, posy, posz)
+			
+		If timeMs > _spawnTimeMs + _lifeTimeMs
+			Local scene:tobject = obj.getScene()
+			Local game:tgame = tgame(scene._extra)
+			If game	
+				obj._animators.clear()
+				obj.setParent(Null)
+				game._bullets.addLast(obj)
+			EndIf
+		EndIf
+	EndMethod
+EndType
+
+Type tRockAnimator Extends tAnimator
+	Field _velx:Float
+	Field _vely:Float
+	Field _velz:Float
+	Field _rotx:Float
+	Field _roty:Float
+	Field _rotz:Float
+	
+	Method init(velx:Float, vely:Float, velz:Float, rotx:Float, roty:Float, rotz:Float)
+		_velx = velx
+		_vely = vely
+		_velz = velz
+		_rotx = rotx
+		_roty = roty
+		_rotz = rotz
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		Local posx:Float = obj._posx
+		Local posy:Float = obj._posy
+		Local posz:Float = obj._posz
+		posx :+ _velx; posy :+ _vely; posz :+ _velz
+		
+		If posy < -18.0 posy = 18.0
+		If posy > 18 posy = -18.0
+		If posx < -30 posx = 30
+		If posx > 30 posx = -30
+		obj.moveTo(posx, posy, posz)
+
+		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._posz + _rotz)
+	EndMethod
+EndType
+
+AppTitle = "Star-Roids"
 Local game:tGame = New tGame
 game.init(1200, 700)
 game.run()
