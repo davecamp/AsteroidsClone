@@ -340,7 +340,7 @@ Type math
 	
 	Function lerp:Float(a:Float, b:Float, t:Float)
 		Return a + (b - a) * t
-	EndFunction 
+	EndFunction
 EndType
 
 Type tWindow
@@ -572,14 +572,23 @@ Type tGame
 	Field _copyright:tobject
 	Field _pressToStart:tobject
 	Field _title:tobject
+	
+	Field _planetcore:tobject
+	Field _planet:tobject
 	Field _titlebelt:tobject
-
-	Field _chars:tobject[10]
 	
 	Field _score:Int
 	Field _scoreobject:tobject
-	Field _scoredigits:tobject[][6]
 	
+	Field _highscore:Int = 10000
+	Field _highscoreobject:tobject
+	
+	Field _waveComplete:tobject
+	Field _getReady:tobject
+	
+	Field _rocksToDestroy:Int
+	Field _currentWave:Int
+		
 	Field _bulletstore:TList
 	
 	Const COLLISION_ID_SHIP:Int = 1
@@ -626,24 +635,14 @@ Type tGame
 	Method createGameObjects()
 		_font = New tFont
 		
-		' numbers
-		For Local i:Int = 0 Until 10
-			Local c:String = Chr(i + 48)
-			Local mesh:tmesh = _font.createsentence(c)
-			_chars[i] = New tobject.Create(_pipeline._device, mesh, Null, RENDERFLAG_WIREFRAME)
-		Next
-		
 		' score
-		For Local i:Int = 0 Until 6
-			_scoredigits[i] = New tobject[10]
-			For Local j:Int = 0 Until 10
-				Local mesh:tmesh = _font.createsentence(Chr(j + 48))
-				_scoredigits[i][j] = New tobject.Create(_pipeline._device, mesh, null, RENDERFLAG_WIREFRAME)
-			Next
-		Next
-		'_scoreobject = New tobject
-		'For Local 
-		'_scoredigit[0] = _chars[0]
+		_scoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
+		_scoreobject.moveTo(-21, 14, 0)
+		tobjectscore(_scoreobject).setscorepointer(Varptr _score)
+		
+		_highscoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
+		_highscoreobject.moveTo(0, 14, 0)
+		tobjectscore(_highscoreobject).setscorepointer(Varptr _highscore)
 		
 		' title
 		Local msg:String = "StarRoids"
@@ -656,33 +655,51 @@ Type tGame
 		titlemesh.scale(2, 2, 2)
 
 		Local titleObject:tobject = New tObject.Create(_pipeline._device, titleMesh, _title, RENDERFLAG_WIREFRAME)
-		titleObject.moveto( -Float(msg.length), -.5, 0)
+		titleObject.moveto( -Float(msg.length), -0.5, 0)
 		titleobject.setname("titleobject")
 		
+		' get ready
+		msg = "get ready"
+		Local getreadymesh:tmesh = _font.createsentence(msg)
+		_getready = New tobject.Create(_pipeline._device, getreadymesh, Null, RENDERFLAG_WIREFRAME)
+		_getready.moveTo(-Float(msg.length) / 2.0, 0.0, -30.0)
+		
+		 'wave complete
+		msg = "wave complete"
+		Local wavecompletemesh:tmesh = _font.createsentence(msg)
+		_wavecomplete = New tobject.Create(_pipeline._device, wavecompletemesh, Null, RENDERFLAG_WIREFRAME)
+		_wavecomplete.moveTo(-6.5, 0.0, -60.0)
+		
+		' planet core
+		_planetcore:tobject = New tobject
+		_planetcore.setparent(_scene)
+		_planetcore.rotateTo(0.0, 0.0, 0.0)
+		_planetcore.moveTo(0.0, 5.5, 0.0)
+		_planetcore.setname("planet core")
+
 		' planet
 		Local planetdata:String = New tasteroid.Create()
 		Local planetmesh:tmesh = parsemeshdata(planetdata, 4)
-		Local planetobject:tobject = New tobject.Create(_pipeline._device, planetmesh, _scene, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
-		planetobject.setname("planet")
-		planetobject.moveTo(0.0, 5.5, 0.0)
-		'planetobject.moveto(11.0, 5.5, -35)
+		_planet = New tobject.Create(_pipeline._device, planetmesh, _planetcore, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
+		_planet.setname("planet")
+		_planet.moveTo(0.0, 0.0, 0.0)
+		_planet.rotateTo(0.0, 0.0, 0.0)
 		
 		Local planetrotation:tRotationAnimator = New tRotationAnimator
 		planetrotation.init(0.0, -0.1, 0.0)
-		planetobject.addAnimator(planetrotation)
-		planetobject.setcolour(0.3, 0.3, 0.3, 1.0)
+		_planet.addAnimator(planetrotation)
+		_planet.setcolour(0.3, 0.3, 0.3, 1.0)
 
 		' logo asteroid belt
 		Local titlebeltmeshdata:String = New tasteroidbelt.Create()
 		Local titlebeltmesh:tmesh = parsemeshdata(titlebeltmeshdata, 1.0)
 		
-		Local test:tobject = New tobject
-		test.setparent(_scene)
-		test.rotateTo(120.0, 0.0, 0.0)
-		test.moveTo(0.0, 5.5, 0.0)
-		'test.moveTo(12.0, 6.0, -45)
-		test.setname("test")
-		_titlebelt = New tobject.Create(_pipeline._device, titlebeltmesh, test, RENDERFLAG_WIREFRAME)
+		Local belt:tobject = New tobject
+		belt.setparent(_planetcore)
+		belt.rotateTo(120.0, 0.0, 0.0)
+		belt.setname("belt")
+		
+		_titlebelt = New tobject.Create(_pipeline._device, titlebeltmesh, belt, RENDERFLAG_WIREFRAME)
 		_titlebelt.setColour(0.6, 0.6, 0.6, 1.0)
 		_titlebelt.setname("title asteroid belt")
 
@@ -713,10 +730,10 @@ Type tGame
 		Local textmesh:tmesh = _font.createSentence(msg)
 		Local text:tobject = New tObject.Create(_pipeline._device, textmesh, _copyright, RENDERFLAG_WIREFRAME)
 		text.moveto( -Float(msg.length)/2, -.5, 0)
-		test.setname("copyrighttext")
+		text.setname("copyrighttext")
 	
 		Local textRoller:tRollAnimator = New tRollAnimator
-		textRoller.init(5000, 3000, MilliSecs())
+		textRoller.init(1, 5000, 3000, MilliSecs())
 		_copyright.addAnimator(textRoller)
 
 		' create ship
@@ -733,21 +750,21 @@ Type tGame
 		For Local i:Int = 0 Until 10
 			Local bullet:tobject = New tobject.Create(_pipeline._device, bulletMesh, Null, RENDERFLAG_WIREFRAME)
 			bullet.setCollisionId(COLLISION_ID_BULLET)
-			bullet.setCollisionRadius(0.05)
+			bullet.setCollisionRadius(0.1)
 			_bulletstore.addlast(bullet)
 		Next
 		
 		' create some explosion particles
-		Local particleMesh:tmesh = parsemeshdata(particleMeshData, Rnd(1.0, 2.0))
+		'Local particleMesh:tmesh = parsemeshdata(particleMeshData, Rnd(1.0, 2.0))
+		Local particledata:String = New tasteroid.Create()
+		Local particleMesh:tmesh = parsemeshdata(particledata, Rnd(0.01, 0.05))
+
 		For Local i:Int = 0 Until 256
 			Local particle:tobject = New tobject.Create(_pipeline._device, particleMesh, Null, RENDERFLAG_WIREFRAME)
 			_particleStore.addLast(particle)
 		Next
 		
-		createRocks()
-	EndMethod
-
-	Method createRocks()
+		' create some rocks
 		Local rockdata:String = New tasteroid.Create()
 		
 		' create 16 big rocks
@@ -990,29 +1007,83 @@ Type tGame
 		Wend
 	EndMethod
 	
-	Method beginGameLevel(level:Int)
+	Method beginGameLevel()
 		_ship.setparent(_gui)
 
 		SeedRnd(MilliSecs() * MilliSecs())
-		For Local i:Int = 0 Until 4		
+
+		_rocksToDestroy = 0
+
+		' top edge
+		For Local i:Int = 0 Until (6 + _currentWave) / 4
+			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
 				rock.setparent(_gui)
 				rock.moveTo(Rnd(-20, 20), 14 + Rnd(-1, 1), 0)
-	
+				rock.update(MilliSecs())
+
 				' big rock will move slower
 				Local rockanim:tRockAnimator = New tRockAnimator
-				rockanim.init(Rnd(-0.05, 0.05), Rnd(-0.05, 0.0), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rockanim.init(Rnd(-0.05, 0.05), Rnd(-0.02, -0.05), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
 				rock.addAnimator(rockanim)
 			EndIf
-		Next		
+		Next
+		
+		' bottom edge
+		For Local i:Int = 0 Until (6 + _currentWave) / 4
+			_rocksToDestroy :+ 1
+			Local rock:tobject = getRock(3)
+			If rock
+				rock.setparent(_gui)
+				rock.moveTo(Rnd(-20, 20), -14 + Rnd(-1, 1), 0)
+				rock.update(MilliSecs())
+
+				' big rock will move slower
+				Local rockanim:tRockAnimator = New tRockAnimator
+				rockanim.init(Rnd(-0.05, 0.05), Rnd(0.02, 0.05), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rock.addAnimator(rockanim)
+			EndIf
+		Next
+		
+		' left edge
+		For Local i:Int = 0 Until (6 + _currentWave) / 4
+			_rocksToDestroy :+ 1
+			Local rock:tobject = getRock(3)
+			If rock
+				rock.setparent(_gui)
+				rock.moveTo(Rnd(-20, 20), -14 + Rnd(-1, 1), 0)
+				rock.update(MilliSecs())
+
+				' big rock will move slower
+				Local rockanim:tRockAnimator = New tRockAnimator
+				rockanim.init(Rnd(0.02, 0.05), Rnd(-0.05, 0.05), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rock.addAnimator(rockanim)
+			EndIf
+		Next
+		
+		' righttedge
+		For Local i:Int = 0 Until (6 + _currentWave) / 4
+			_rocksToDestroy :+ 1
+			Local rock:tobject = getRock(3)
+			If rock
+				rock.setparent(_gui)
+				rock.moveTo(Rnd(-20, 20), -14 + Rnd(-1, 1), 0)
+				rock.update(MilliSecs())
+
+				' big rock will move slower
+				Local rockanim:tRockAnimator = New tRockAnimator
+				rockanim.init(Rnd(-0.02, 0.05), Rnd(-0.05, 0.05), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rock.addAnimator(rockanim)
+			EndIf
+		Next	
 	EndMethod
-	
+
 	Method updateintro()
 		updategamelogic(MilliSecs())	
 		rendergame()
 	EndMethod
-	
+
 	Method updategame()
 		updategamelogic(MilliSecs())		
 		rendergame()
@@ -1023,25 +1094,25 @@ Type tGame
 
 		_root.update(timeMs:Int)
 	EndMethod
-	
+
 	Method rendergame()
 			_pipeline.Cls([0.0, 0.0, 0.0, 1.0])
-			
+
 			' start frame
 			_pipeline._context.VSSetConstantBuffers(0, 1, Varptr _vsConstants)
 			_pipeline._context.VSSetShader(_vertexShader, Null, 0)
 			_pipeline._context.PSSetShader(_pixelShader, Null, 0)
-			
+
 			' per frame
 			Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
 			_pipeline._context.Map(_vsConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
 			MemCopy(map.pData, _view, 64)
 			MemCopy(map.pData + 64, _proj, 64)
 			_pipeline._context.Unmap(_vsConstants, 0)
-			
+
 			renderscene()
 			rendergui()
-			
+
 			_pipeline.Present(True)
 	EndMethod
 	
@@ -1298,7 +1369,7 @@ Type tobject
 			obj.renderSolid(context)
 		Next
 	EndMethod
-	
+
 	Method renderWireframe(context:ID3D11DeviceContext)
 		If _renderflag & RENDERFLAG_WIREFRAME
 			Local root:tobject = getRoot()
@@ -1354,6 +1425,56 @@ Type tobjectRock Extends tobject
 	EndMethod
 EndType
 
+Type tobjectScore Extends tobject
+	Field _scorepointer:Int Ptr
+	Field _chars:tobject[10]
+
+	Method Create:tobjectscore(device:ID3D11Device, mesh:tmesh, parent:tobject, renderFlag:Int)
+		setparent(parent)
+		
+		' current score
+		Local root:tobject = getroot()
+		Local game:tgame = tgame(root._extra)
+		
+		For Local i:Int = 0 Until 10
+			Local mesh:tmesh = game._font.createsentence(Chr(i + 48))
+			_chars[i] = New tobject.Create(game._pipeline._device, mesh, Self, RENDERFLAG_WIREFRAME)
+		Next
+		
+		Return Self
+	EndMethod
+	
+	Method setscorepointer(scorepointer:Int Ptr)
+		_scorepointer = scorepointer
+	EndMethod
+	
+	Method renderWireframe(context:ID3D11DeviceContext)
+		'Local root:tobject = getroot()
+		'Local game:tgame = tgame(root._extra)
+		Local score:String
+		If(_scorepointer)
+			score = _scorepointer[0]
+		Else
+			score = 0
+		EndIf
+
+		Local xpos:Float = -(score.length / 2.0)		
+		For Local i:Int = 0 Until score.length
+			If score[i] >= 48 And score[i] <= 57
+				Local ch:Int = score[i] - 48
+				_chars[ch].moveTo(xpos + i, 0.0, 0.0)
+				
+				_chars[ch].updatelocal()
+				
+				' each char parent is 'this' so use own world position
+				math.multiplym4m4(_world, _chars[ch]._local, _chars[ch]._world)
+				
+				_chars[ch].renderWireframe(context)
+			EndIf
+		Next
+	EndMethod
+EndType
+
 Type tanimator
 	Method animate(obj:tobject, timeMs:Int) Abstract
 EndType
@@ -1369,7 +1490,184 @@ Type tIntroAnimator Extends tAnimator
 			
 			game._pressToStart.setParent(Null)
 			game._title.setparent(Null)
-			game.BeginGameLevel(1)
+			game._currentWave = 1
+			
+			Local begin:tBeginLevelAnimator = New tBeginLevelAnimator
+			begin.init(timeMs)
+			game._gui.addAnimator(begin)
+		EndIf
+	EndMethod
+EndType
+
+Type tBeginLevelAnimator Extends tAnimator
+	Field _initTimeMs:Int
+	Field _state:Int
+	
+	Field _targetx:Float
+	Field _targety:Float
+	Field _targetz:Float
+	
+	Method init(initTimeMs:Int)
+		_initTimeMs = initTimeMs
+		_state = 0
+		
+		Local a:Int = Rand(0, 3)
+		Select a
+		Case 0
+			_targetx = 11.0
+			_targety = 5.5
+			_targetz = -35.0
+			
+		Case 1
+			_targetx = -11.0
+			_targety = 5.5
+			_targetz = -35.0
+
+		Case 2
+			_targetx = 5.0
+			_targety = 5.5
+			_targetz = -35.0
+
+		Case 3
+			_targetx = -5.0
+			_targety = 5.5
+			_targetz = -35.0
+		EndSelect	
+	EndMethod
+
+	Method animate(obj:tobject, timeMs:Int)
+		Local root:tobject = obj.getroot()
+		Local game:tgame = tgame(root._extra)
+		
+		If _state = 0
+			Local core:tobject = game._planetcore
+			Local x:Float = core._posx
+			Local y:Float = core._posy
+			Local z:Float = core._posz
+					
+			Local distx:Float = _targetx - x
+			Local disty:Float = _targety - y
+			Local distz:Float = _targetz - z
+			
+			Local dx:Float = core._posx + distx * 0.05
+			Local dy:Float = core._posy + disty * 0.05
+			Local dz:Float = core._posz + distz * 0.05
+			core.moveTo(dx, dy, dz)
+			
+			Local delta:Float = Sqr(distx * distx + disty * disty + distz * distz)
+			If delta < 0.1
+				core.moveTo(_targetx, _targety, _targetz)
+
+				game._getready.setparent(game._gui)
+				_initTimeMs = timeMs
+				_state = 1
+			EndIf
+		
+		Else If _state = 1
+			If timeMs > _initTimeMs + 1000
+				game._getready.setparent(Null)
+				game._gui.removeAnimator(Self)
+				game.beginGamelevel()
+			EndIf
+		EndIf
+	EndMethod
+EndType
+
+Type tLeaveLevelAnimator Extends tAnimator
+	Field _initTimeMs:Int
+	Field _state:Int
+	
+	Method init(initTimeMs:Int)
+		_initTimeMs = initTimeMs
+		_state = 0
+	EndMethod
+
+	Method animate(obj:tobject, timeMs:Int)
+		Local root:tobject = obj.getroot()
+		Local game:tgame = tgame(root._extra)
+
+		If _state = 0
+			If timeMs > _initTimeMs + 1500
+				' _planetcore.moveTo(0.0, 5.5, 0.0)
+				Local core:tobject = game._planetcore
+				Local x:Float = core._posx
+				Local y:Float = core._posy
+				Local z:Float = core._posz
+				
+				Local destx:Float = 0.0
+				Local desty:Float = 5.5
+				Local destz:Float = 0.0
+				
+				Local distx:Float = destx - x
+				Local disty:Float = desty - y
+				Local distz:Float = destz - z
+				
+				Local dx:Float = core._posx + distx * 0.05
+				Local dy:Float = core._posy + disty * 0.05
+				Local dz:Float = core._posz + distz * 0.05
+				core.moveTo(dx, dy, dz)
+				
+				Local delta:Float = Sqr(distx * distx + disty * disty + distz * distz)
+				
+				If delta < 0.1
+					core.moveTo(0.0, 5.5, 0.0)
+	
+					game._waveComplete.setparent(game._gui)
+					_initTimeMs = timeMs
+					_state = 1
+				EndIf
+			EndIf
+		
+		Else If _state = 1
+			If timeMs > _initTimeMs + 1000
+				game._gui.removeanimator(Self)
+
+				Local anim:twavecompleteanimator = New twavecompleteanimator
+				anim.init(timeMs)
+				game._waveComplete.setparent(game._gui)
+				game._gui.addAnimator(anim)
+			EndIf
+		EndIf
+	EndMethod
+EndType
+
+Type tWaveCompleteAnimator Extends tAnimator
+	Field _initTimeMs:Int
+
+	Method init(initTimeMs:Int)
+		_initTimeMs = initTimeMs
+	EndMethod
+
+	Method animate(obj:tobject, timeMs:Int)
+		Local timeTakenMs:Int = timeMs - _initTimeMs
+		
+		Local root:tobject = obj.getroot()
+		Local game:tgame = tgame(root._extra)
+		Local wave:tobject = game._wavecomplete
+
+		' wait then show 'wave complete'
+		If timeTakenMs < 500
+			Local tMs:Float = ((timeTakenMs - 500 ) / 1000.0) / 2.5
+			Local posz:Float = Cos(tMs * 180 / Pi)
+			wave.moveTo(wave._posx, wave._posy, wave._posz + posz)
+		EndIf
+		
+		If timeTakenMs > 3000 And timeTakenMs < 3500
+			Local tMs:Float = ((timeTakenMs -3000 ) / 1000.0) / 2.5
+			Local posz:Float = Cos(tMs * 180 / Pi)
+			wave.moveTo(wave._posx, wave._posy, wave._posz - posz)
+		EndIf
+		
+		If timeTakenMs > 3500 wave.moveTo(wave._posx, wave._posy, -65.0)
+		
+		If timeTakenMs > 4500
+			obj.removeanimator(Self)
+			game._wavecomplete.setparent(Null)
+			game._currentWave :+ 1
+			
+			Local begin:tBeginLevelAnimator = New tBeginLevelAnimator
+			begin.init(timeMs)
+			game._gui.addAnimator(begin)
 		EndIf
 	EndMethod
 EndType
@@ -1385,8 +1683,10 @@ Type tRollAnimator Extends tanimator
 	Field _timeToRollMs:Int
 	Field _timeToWaitMs:Int
 	Field _state:Int				' 0 is idle, 1 is rotating
+	Field _axis:Int
 
-	Method init(waitTimeMs:Int, timeToRollMs:Int, initTimeMs:Int)
+	Method init(axis:Int, waitTimeMs:Int, timeToRollMs:Int, initTimeMs:Int)
+		_axis = axis
 		_timeToWaitMs = waitTimeMs
 		_timeToRollMs = timeToRollMs
 		
@@ -1408,7 +1708,16 @@ Type tRollAnimator Extends tanimator
 			' standard lerp
 			Local t:Float = (timeMs - _lastTimeMs) / Float(_timeToRollMs)
 			Local ang:Float = math.lerp(0.0, 360.0, t)
-			obj.rotateTo(ang, 0, 0)
+			
+			Select _axis
+			Case 1 obj.rotateTo(ang, 0, 0)
+			Case 2 obj.rotateTo(0, ang, 0)
+			Case 3 obj.rotateTo(ang, ang, 0)
+			Case 4 obj.rotateTo(0, 0, ang)
+			Case 5 obj.rotateTo(ang, 0, ang)
+			Case 6 obj.rotateTo( 0, ang, ang)
+			Case 7 obj.rotateTo(ang, ang, ang)
+			EndSelect
 			
 			If time  > _timeToRollMs
 				obj.rotateTo(0, 0, 0)
@@ -1444,10 +1753,10 @@ Type tShipAnimator Extends tanimator
 		Local posz:Float = obj._posz
 		posx :+ _velx; posy :+ _vely; posz :+ _velz
 		
-		If posy < -18.0 posy = 18.0
-		If posy > 18 posy = -18.0
-		If posx < -30 posx = 30
-		If posx > 30 posx = -30
+		If posy < -17.0 posy = 17.0
+		If posy > 17 posy = -17.0
+		If posx < -29.0 posx = 29.0
+		If posx > 29.0 posx = -29.0
 		obj.moveTo(posx, posy, posz)
 
 		If KeyHit(KEY_SPACE)
@@ -1495,8 +1804,8 @@ Type tbulletAnimator Extends tanimator
 		
 		If posy < -18.0 posy = 18.0
 		If posy > 18 posy = -18.0
-		If posx < -30 posx = 30
-		If posx > 30 posx = -30
+		If posx < -29.5 posx = 29.5
+		If posx > 29.5 posx = -29.5
 		obj.moveTo(posx, posy, posz)
 			
 		If timeMs > _spawnTimeMs + _lifeTimeMs
@@ -1525,7 +1834,7 @@ Type tRotationAnimator Extends tAnimator
 		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._rotz + _rotz)
 	EndMethod
 EndType
-
+Rem
 Type tVelocityAnimator Extends tAnimator
 	Field _velx:Float
 	Field _vely:Float
@@ -1544,14 +1853,14 @@ Type tVelocityAnimator Extends tAnimator
 		posx :+ _velx; posy :+ _vely; posz :+ _velz
 		
 		If posy < -18.0 posy = 18.0
-		If posy > 18 posy = -18.0
-		If posx < -30 posx = 30
-		If posx > 30 posx = -30
+		If posy > 18.0 posy = -18.0
+		If posx < -29.0 posx = 29.0
+		If posx > 29.0 posx = -29.0
 		
 		obj.moveTo(posx, posy, posz)
 	EndMethod
 EndType
-
+EndRem
 Type tRockAnimator Extends tAnimator
 	Field _velx:Float
 	Field _vely:Float
@@ -1575,10 +1884,10 @@ Type tRockAnimator Extends tAnimator
 		Local posz:Float = obj._posz
 		posx :+ _velx; posy :+ _vely; posz :+ _velz
 		
-		If posy < -18.0 posy = 18.0
-		If posy > 18 posy = -18.0
-		If posx < -30 posx = 30
-		If posx > 30 posx = -30
+		If posy < -18 posy = 18
+		If posy > 18 posy = -18
+		If posx < -29.5 posx = 29.5
+		If posx > 29.5 posx = -29.5
 		
 		obj.moveTo(posx, posy, posz)
 		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._posz + _rotz)
@@ -1629,12 +1938,6 @@ Type tParticleAnimator Extends tAnimator
 	EndMethod
 EndType
 
-Type tScoreAnimator Extends tAnimator
-	Method animate(obj:tObject, timeMs:Int)
-		DebugStop
-	EndMethod
-EndType
-
 Type tCollisionResponder
 	Method collisionWith(collisionData:tCollision) Abstract
 EndType
@@ -1647,6 +1950,9 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		Local root:tobject = rock.getroot()
 		Local game:tgame = tgame(root._extra)
 		Local size:Int = tobjectrock(rock)._size - 1
+		
+		Local scores:Int[] = [100, 50, 20]
+		game._score :+ scores[size]
 
 		' remove the bullet
 		bullet._animators.clear()
@@ -1657,6 +1963,7 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		rock._animators.clear()
 		rock.setparent(Null)
 		game.returnRock(rock)
+		game._rocksToDestroy :- 1
 		
 		' create an explosion
 		Local posx:Float = rock._posx
@@ -1666,7 +1973,7 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		Local epicentre:tobject = New tobject
 		epicentre.setparent(game._scene)
 
-		For Local i:Int = 0 Until 32
+		For Local i:Int = 0 Until 16
 			Local particleanim:tParticleAnimator = New tParticleAnimator
 			particleanim.init(Rnd(-0.5,0.5), Rnd(-0.5,0.5), 0.0, 0.0, 0.0, 0.0, collisionData._timeMs, 800)
 			
@@ -1680,17 +1987,37 @@ Type tBulletToRockResponder Extends tCollisionResponder
 			
 		' split the rock into 2
 		If size <> 0
-			For Local i:Int = 0 Until 3
+			Local newRockCount:Int = 2 ' Rand(2, 3)
+			game._rockstodestroy :+ newRockCount
+			
+			For Local i:Int = 0 Until newRockCount
 				Local rock:tobjectrock = tobjectrock(game.getRock(size))
+				Local vel:Float = (1.0 / rock._size) * (game._currentWave * 0.1)
+				Local velx:Float = Rnd(-vel, vel)
+				Local vely:Float = Rnd(-vel, vel)
+				
+				If velx > -0.01 And velx <= 0.0 velx = -0.01
+				If vely > -0.01 And velx <= 0.0 vely = -0.01
+				If velx < 0.01 And velx >= 0.0 velx = 0.01
+				If vely < 0.01 And vely >= 0.0 vely = 0.01
+				
 				If rock
 					rock.moveTo(posx, posy, posz)
 					rock.setparent(game._gui)
 				
+					' smaller rocks will move faster
 					Local rockanim:tRockAnimator = New tRockAnimator
-					rockanim.init(Rnd(-0.1, 0.1), Rnd(-0.1, 0.1), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+					rockanim.init(velx, vely, 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
 					rock.addAnimator(rockanim)
 				EndIf
 			Next
+		EndIf
+
+		' wave complete?
+		If game._rocksTodestroy = 0
+			Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
+			leaveLevel.init(collisionData._timeMs)
+			game._gui.addanimator(leaveLevel)
 		EndIf
 	EndMethod
 EndType
@@ -1777,7 +2104,7 @@ Type tCollisionManager Extends tAnimator
 				Local radii:Float = (src._collisionRadius + dst._collisionRadius)
 				radii :* radii
 
-				If radii > dist _collisions.addLast(New tCollision.Create(src, dst, timeMs))
+				If radii >= dist _collisions.addLast(New tCollision.Create(src, dst, timeMs))
 			Next
 		Next
 	EndMethod
