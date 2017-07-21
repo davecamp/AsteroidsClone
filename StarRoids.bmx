@@ -243,11 +243,11 @@ Type tFont
 			x :+ 1
 		Next
 		
-		mesh._indices = New Int[mesh._vertices.length]
+		mesh._indices = New Int[mesh._vertices.length / 3]
 		For Local index:Int = 0 Until mesh._indices.length
 			mesh._indices[index] = index
 		Next
-		
+
 		Return mesh
 	EndMethod
 EndType	
@@ -558,7 +558,6 @@ Type tGame
 	
 	Field _view:Float[16]
 	Field _proj:Float[16]
-	Field _model:Float[16]
 	
 	Field _root:tobject
 	Field _scene:tobject
@@ -575,6 +574,12 @@ Type tGame
 	Field _title:tobject
 	Field _titlebelt:tobject
 
+	Field _chars:tobject[10]
+	
+	Field _score:Int
+	Field _scoreobject:tobject
+	Field _scoredigits:tobject[][6]
+	
 	Field _bulletstore:TList
 	
 	Const COLLISION_ID_SHIP:Int = 1
@@ -621,6 +626,25 @@ Type tGame
 	Method createGameObjects()
 		_font = New tFont
 		
+		' numbers
+		For Local i:Int = 0 Until 10
+			Local c:String = Chr(i + 48)
+			Local mesh:tmesh = _font.createsentence(c)
+			_chars[i] = New tobject.Create(_pipeline._device, mesh, Null, RENDERFLAG_WIREFRAME)
+		Next
+		
+		' score
+		For Local i:Int = 0 Until 6
+			_scoredigits[i] = New tobject[10]
+			For Local j:Int = 0 Until 10
+				Local mesh:tmesh = _font.createsentence(Chr(j + 48))
+				_scoredigits[i][j] = New tobject.Create(_pipeline._device, mesh, null, RENDERFLAG_WIREFRAME)
+			Next
+		Next
+		'_scoreobject = New tobject
+		'For Local 
+		'_scoredigit[0] = _chars[0]
+		
 		' title
 		Local msg:String = "StarRoids"
 		_title = New tobject
@@ -641,7 +665,8 @@ Type tGame
 		Local planetobject:tobject = New tobject.Create(_pipeline._device, planetmesh, _scene, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 		planetobject.setname("planet")
 		planetobject.moveTo(0.0, 5.5, 0.0)
-
+		'planetobject.moveto(11.0, 5.5, -35)
+		
 		Local planetrotation:tRotationAnimator = New tRotationAnimator
 		planetrotation.init(0.0, -0.1, 0.0)
 		planetobject.addAnimator(planetrotation)
@@ -655,6 +680,7 @@ Type tGame
 		test.setparent(_scene)
 		test.rotateTo(120.0, 0.0, 0.0)
 		test.moveTo(0.0, 5.5, 0.0)
+		'test.moveTo(12.0, 6.0, -45)
 		test.setname("test")
 		_titlebelt = New tobject.Create(_pipeline._device, titlebeltmesh, test, RENDERFLAG_WIREFRAME)
 		_titlebelt.setColour(0.6, 0.6, 0.6, 1.0)
@@ -798,7 +824,7 @@ Type tGame
 
 			Select comp[0]
 			Case "pointlist" mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST
-			Case "linelist"	mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST
+			Case "linelist" mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST
 			Case "linestrip" mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
 			Case "trianglelist" mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
 			Case "trianglestrip" mesh._topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
@@ -1600,6 +1626,12 @@ Type tParticleAnimator Extends tAnimator
 			obj.setParent(Null)
 			game.returnParticle(obj)
 		EndIf
+	EndMethod
+EndType
+
+Type tScoreAnimator Extends tAnimator
+	Method animate(obj:tObject, timeMs:Int)
+		DebugStop
 	EndMethod
 EndType
 
