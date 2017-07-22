@@ -1,22 +1,57 @@
 
 Strict
 
+' ideas - big and small alien spaceship
+' 		  little ships give power-ups: double shot ship, triple shot ship,..
+'         4 way shot? smart bomb - will need shader to look good, hyperspace - hmm not sure
+
+' for high score table. move to other side of planet? spin the camera around?
+
 Import pub.win32
 Import srs.directx11
 
 Const RENDERFLAG_SOLID:Int = 1
 Const RENDERFLAG_WIREFRAME:Int = 2
 
-Global shipMeshData:String
-shipMeshData :+ "linelist~n"
-shipMeshData :+ "v -0.5 -0.8 0.0~n"
-shipMeshData :+ "v 0.0 0.8 0.0~n"
-shipMeshData :+ "v 0.5 -0.8 0.0~n"
-shipMeshData :+ "v 0.25 -0.5 0.0~n"
-shipMeshData :+ "v -0.25 -0.5 0.0~n"
-shipMeshData :+ "v 0.0 0.2 0.0~n"
-shipMeshData :+ "v 0.0 -0.3 0.0~n"
-shipMeshData :+ "f 0 1 1 2 2 3 3 4 4 0 5 6"
+Global shipMeshDataWireframe:String
+shipMeshDataWireframe :+ "linelist~n"
+shipMeshDataWireframe :+ "v -0.5 -0.8 0.0~n"
+shipMeshDataWireframe :+ "v 0.0 0.8 0.0~n"
+shipMeshDataWireframe :+ "v 0.5 -0.8 0.0~n"
+shipMeshDataWireframe :+ "v 0.25 -0.5 0.0~n"
+shipMeshDataWireframe :+ "v -0.25 -0.5 0.0~n"
+shipMeshDataWireframe :+ "v 0.0 0.2 0.0~n"
+shipMeshDataWireframe :+ "v 0.0 -0.3 0.0~n"
+shipMeshDataWireframe :+ "f 0 1 1 2 2 3 3 4 4 0 5 6"
+
+Global shipUpgradeMeshDataWireframe:String
+shipUpgradeMeshDataWireframe :+ "linelist~n"
+shipUpgradeMeshDataWireframe :+ "v -2.0 -4 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -2.0 1.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 2.0 1.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 2.0 -4 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -6.0 -3.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -6.0 -1.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -2.0 0.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 6.0 -3.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 6.0 -1.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 2.0 0.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -1.0 5.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 1.0 5.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -1.25 4.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -2.9 3.25 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -2.9 2.25 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v -1.75 2.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 1.25 4.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 2.9 3.25 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 2.9 2.25 0.0~n"
+shipUpgradeMeshDataWireframe :+ "v 1.75 2.0 0.0~n"
+shipUpgradeMeshDataWireframe :+ "f 0 1 1 2 2 3 3 0~n"
+shipUpgradeMeshDataWireframe :+ "f 0 4 4 5 5 6~n"
+shipUpgradeMeshDataWireframe :+ "f 3 7 7 8 8 9~n"
+shipUpgradeMeshDataWireframe :+ "f 1 10 10 11 11 2~n"
+shipUpgradeMeshDataWireframe :+ "f 12 13 13 14 14 15~n"
+shipUpgradeMeshDataWireframe :+ "f 16 17 17 18 18 19~n"
 
 Global bulletMeshData:String
 bulletMeshData :+ "linelist~n"
@@ -26,16 +61,9 @@ bulletMeshData :+ "v 0.03 0.03 0.0~n"
 bulletMeshData :+ "v 0.03 -0.03 0.0~n"
 bulletMeshData :+ "f 0 1 2 3 0~n"
 
-Global particleMeshData:String
-particleMeshData :+ "linelist~n"
-particleMeshData :+ "v -0.02 -0.02 0.0~n"
-particleMeshData :+ "v -0.02 0.02 0.0~n"
-particleMeshData :+ "v 0.02 0.02 0.0~n"
-particleMeshData :+ "v 0.02 -0.02 0.0~n"
-particleMeshData :+ "f 0 1 2 3 0~n"
-
 Type tAsteroid	
 	Method Create:String()
+		Local s:Float = (1.0 - Sqr(5.0)) / 2.0
 		Local t:Float = (1.0 + Sqr(5.0)) / 2.0
 
 		Local meshdata:String = "trianglelist~n"
@@ -170,35 +198,35 @@ Type tFont
 		' 0 to 10
 		_glyphs[0] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0])          ' 0
 		_glyphs[1] = New tGlyph.Create([5, 9])                                ' 1
-		_glyphs[2] = New tGlyph.Create([4, 14, 14, 11, 11, 1, 1, 0, 0, 10])   ' 2
-		_glyphs[3] = New tGlyph.Create([4, 14, 14, 10, 10, 0, 11, 1])         ' 3
+		_glyphs[2] = New tGlyph.Create([4, 14, 14, 12, 12, 2, 2, 0, 0, 10])   ' 2
+		_glyphs[3] = New tGlyph.Create([4, 14, 14, 10, 10, 0, 12, 2])         ' 3
 		_glyphs[4] = New tGlyph.Create([4, 1, 1, 11, 10, 14])                 ' 4
-		_glyphs[5] = New tGlyph.Create([14, 4, 4, 1, 1, 11, 11, 10, 10, 0])   ' 5
-		_glyphs[6] = New tGlyph.Create([4, 0, 0, 10, 10, 11, 11, 1])          ' 6
+		_glyphs[5] = New tGlyph.Create([14, 4, 4, 2, 2, 12, 12, 10, 10, 0])   ' 5
+		_glyphs[6] = New tGlyph.Create([4, 0, 0, 10, 10, 12, 12, 1])          ' 6
 		_glyphs[7] = New tGlyph.Create([4, 14, 14, 10])                       ' 7
-		_glyphs[8] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0, 1, 11])   ' 8
-		_glyphs[9] = New tGlyph.Create([10, 14, 14, 4, 4, 1, 1, 11])          ' 9
+		_glyphs[8] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0, 2, 12])   ' 8
+		_glyphs[9] = New tGlyph.Create([10, 14, 14, 4, 4, 2, 2, 12])          ' 9
 
 		' A to Z
 		_glyphs[10] = New tGlyph.Create([0, 1, 1, 9, 9, 11, 11, 10, 1, 11])       ' A
 		_glyphs[11] = New tGlyph.Create([0, 4, 4, 9, 9, 13, 13, 7, 7, 11, 11, 5, 5, 0, 2, 7])  ' B
 		_glyphs[12] = New tGlyph.Create([10, 0, 0, 4, 4, 14])                     ' C
 		_glyphs[13] = New tGlyph.Create([0, 4, 4, 9, 9, 13, 13, 11, 11, 5, 5, 0]) ' D
-		_glyphs[14] = New tGlyph.Create([10, 0, 0, 4, 4, 14, 1, 6])               ' E
+		_glyphs[14] = New tGlyph.Create([10, 0, 0, 4, 4, 14, 2, 7])               ' E
 		_glyphs[15] = New tGlyph.Create([0, 4, 4, 14, 2, 7])                      ' F
-		_glyphs[16] = New tGlyph.Create([14, 4, 4, 0, 0, 10, 10, 11, 11, 6])      ' G
-		_glyphs[17] = New tGlyph.Create([0, 4, 10, 14, 1, 11])                    ' H
+		_glyphs[16] = New tGlyph.Create([14, 4, 4, 0, 0, 10, 10, 12, 12, 7])  ' G
+		_glyphs[17] = New tGlyph.Create([0, 4, 10, 14, 2, 12])                    ' H
 		_glyphs[18] = New tGlyph.Create([4, 14, 0, 10, 5, 9])                     ' I
 		_glyphs[19] = New tGlyph.Create([4, 14, 14, 10, 10, 5, 5, 1])             ' J
-		_glyphs[20] = New tGlyph.Create([0, 4, 1, 14, 1, 10])                     ' K
+		_glyphs[20] = New tGlyph.Create([0, 4, 2, 14, 2, 10])                     ' K
 		_glyphs[21] = New tGlyph.Create([4, 0, 0, 10])                            ' L
 		_glyphs[22] = New tGlyph.Create([0, 4, 4,  8, 8, 14, 14, 10])             ' M
 		_glyphs[23] = New tGlyph.Create([0, 4, 4, 10, 10, 14])                    ' N
 		_glyphs[24] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0])             ' O
-		_glyphs[25] = New tGlyph.Create([0, 4, 4, 14, 14, 13, 13, 3])             ' P
+		_glyphs[25] = New tGlyph.Create([0, 4, 4, 14, 14, 12, 12, 2])             ' P
 		_glyphs[26] = New tGlyph.Create([0, 4, 4, 14, 14, 11, 11, 5, 5, 0, 6, 10]) ' Q
-		_glyphs[27] = New tGlyph.Create([0, 4, 4, 14, 14, 11, 11, 1, 1, 10])      ' R
-		_glyphs[28] = New tGlyph.Create([14, 4, 4, 1, 1, 11, 11, 10, 10, 0])      ' S
+		_glyphs[27] = New tGlyph.Create([0, 4, 4, 14, 14, 12, 12, 2, 2, 10])      ' R
+		_glyphs[28] = New tGlyph.Create([14, 4, 4, 2, 2, 12, 12, 10, 10, 0])      ' S
 		_glyphs[29] = New tGlyph.Create([5, 9, 4, 14])                            ' T
 		_glyphs[30] = New tGlyph.Create([4, 0, 0, 10, 10, 14])                    ' U
 		_glyphs[31] = New tGlyph.Create([4, 5, 5, 14])                            ' V
@@ -499,7 +527,7 @@ Type tGpuD3D11
 		state.CullMode = D3D11_CULL_BACK
 		state.MultisampleEnable = True
 		state.AntialiasedLineEnable = True
-		state.DepthBias = -100
+		state.DepthBias = -500
 		
 		_device.CreateRasterizerState(state, _rasterstate)
 		If Not _rasterstate Throw " could not create rasterizer state"
@@ -591,6 +619,9 @@ Type tGame
 		
 	Field _bulletstore:TList
 	
+	Field _soundShot:TSound
+	Field _rockbreak:TSound
+	
 	Const COLLISION_ID_SHIP:Int = 1
 	Const COLLISION_ID_BULLET:Int = 2
 	Const COLLISION_ID_ROCK:Int = 3
@@ -633,6 +664,10 @@ Type tGame
 	EndMethod
 	
 	Method createGameObjects()
+		' sounds
+		_soundshot = LoadSound("sounds/shot.wav")
+		_rockbreak = LoadSound("sounds/rockbreak.wav")
+		
 		_font = New tFont
 		
 		' score
@@ -737,8 +772,9 @@ Type tGame
 		_copyright.addAnimator(textRoller)
 
 		' create ship
-		Local shipmesh:tmesh = parsemeshdata(shipMeshData, 1)
-		_ship = New tobject.Create(_pipeline._device, shipmesh, Null, RENDERFLAG_WIREFRAME)
+		Local shipmesh:tmesh = parsemeshdata(shipMeshDataWireframe, 1)
+		Local shipupgrademesh:tmesh = parsemeshdata(shipUpgradeMeshDataWireframe, 0.2)
+		_ship = New tobject.Create(_pipeline._device, shipupgrademesh, _gui, RENDERFLAG_WIREFRAME)
 		_ship.setName("ship")
 		Local shipAnimator:tShipAnimator = New tShipAnimator
 		_ship.addAnimator(shipAnimator)
@@ -747,7 +783,7 @@ Type tGame
 		
 		' create bullets
 		Local bulletMesh:tMesh = parsemeshdata(bulletMeshData, 1.0)
-		For Local i:Int = 0 Until 10
+		For Local i:Int = 0 Until 32
 			Local bullet:tobject = New tobject.Create(_pipeline._device, bulletMesh, Null, RENDERFLAG_WIREFRAME)
 			bullet.setCollisionId(COLLISION_ID_BULLET)
 			bullet.setCollisionRadius(0.1)
@@ -755,7 +791,6 @@ Type tGame
 		Next
 		
 		' create some explosion particles
-		'Local particleMesh:tmesh = parsemeshdata(particleMeshData, Rnd(1.0, 2.0))
 		Local particledata:String = New tasteroid.Create()
 		Local particleMesh:tmesh = parsemeshdata(particledata, Rnd(0.01, 0.05))
 
@@ -772,7 +807,7 @@ Type tGame
 			Local rockmesh:tmesh = parsemeshdata(rockdata, 1.0)
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
-			rock.setCollisionRadius((1.0 + Sqr(5.0)) / 2.0)
+			rock.setCollisionRadius(1.8)
 			
 			tobjectrock(rock).setSize(3)			
 			_rockstore.addLast(rock)
@@ -783,7 +818,7 @@ Type tGame
 			Local rockmesh:tmesh = parsemeshdata(rockdata, 0.6)
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
-			rock.setCollisionRadius(((1.0 + Sqr(5.0)) / 2.0) * 0.6)
+			rock.setCollisionRadius(1.8 * 0.6)
 			
 			tobjectrock(rock).setSize(2)
 			_rockstore.addLast(rock)
@@ -794,7 +829,7 @@ Type tGame
 			Local rockmesh:tmesh = parsemeshdata(rockdata, 0.3)
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
-			rock.setCollisionRadius(((1.0 + Sqr(5.0)) / 2.0) * 0.3)
+			rock.setCollisionRadius(1.8 * 0.3)
 			
 			tobjectrock(rock).setSize(1)
 			_rockstore.addLast(rock)
@@ -1009,71 +1044,74 @@ Type tGame
 	
 	Method beginGameLevel()
 		_ship.setparent(_gui)
-
-		SeedRnd(MilliSecs() * MilliSecs())
-
 		_rocksToDestroy = 0
 
+		Local velMin:Float = 0.02 + ((_currentWave + 1) / 200.0)
+		Local velMax:Float = 0.05 + ((_currentWave + 1) / 200.0)
+
+		Local wave:Int = _currentWave
+		If wave > 5 wave = 5
+		
 		' top edge
-		For Local i:Int = 0 Until (6 + _currentWave) / 4
+		For Local i:Int = 0 Until (6 + wave) / 4
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
 				rock.setparent(_gui)
-				rock.moveTo(Rnd(-20, 20), 14 + Rnd(-1, 1), 0)
+				rock.moveTo(Rnd(-29, 29), 18 + Rnd(-1, 1), 0)
 				rock.update(MilliSecs())
 
 				' big rock will move slower
 				Local rockanim:tRockAnimator = New tRockAnimator
-				rockanim.init(Rnd(-0.05, 0.05), Rnd(-0.02, -0.05), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rockanim.init(Rnd(-velMax, velMax), Rnd(-velMin, -velMax), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
 				rock.addAnimator(rockanim)
 			EndIf
 		Next
-		
+
 		' bottom edge
-		For Local i:Int = 0 Until (6 + _currentWave) / 4
+		For Local i:Int = 0 Until (6 + wave) / 4
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
 				rock.setparent(_gui)
-				rock.moveTo(Rnd(-20, 20), -14 + Rnd(-1, 1), 0)
+				rock.moveTo(Rnd(-29, 29), -18 + Rnd(-1, 1), 0)
 				rock.update(MilliSecs())
 
 				' big rock will move slower
 				Local rockanim:tRockAnimator = New tRockAnimator
-				rockanim.init(Rnd(-0.05, 0.05), Rnd(0.02, 0.05), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rockanim.init(Rnd(-velMax, velMax), Rnd(velMin, velMax), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
 				rock.addAnimator(rockanim)
 			EndIf
 		Next
-		
+
 		' left edge
-		For Local i:Int = 0 Until (6 + _currentWave) / 4
+		For Local i:Int = 0 Until (6 + wave) / 4
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
 				rock.setparent(_gui)
-				rock.moveTo(Rnd(-20, 20), -14 + Rnd(-1, 1), 0)
+				rock.moveTo(-29.5 + Rnd(-1, 1), Rnd(-18, 18), 0)
 				rock.update(MilliSecs())
 
 				' big rock will move slower
 				Local rockanim:tRockAnimator = New tRockAnimator
-				rockanim.init(Rnd(0.02, 0.05), Rnd(-0.05, 0.05), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rockanim.init(Rnd(velMin, velMax), Rnd(-velMax, velMax), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
 				rock.addAnimator(rockanim)
 			EndIf
 		Next
-		
+
 		' righttedge
-		For Local i:Int = 0 Until (6 + _currentWave) / 4
+		For Local i:Int = 0 Until (6 + wave) / 4
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
 				rock.setparent(_gui)
-				rock.moveTo(Rnd(-20, 20), -14 + Rnd(-1, 1), 0)
+				rock.moveTo(29 + Rnd(-1, 1), Rnd(-18, 18), 0)
 				rock.update(MilliSecs())
 
 				' big rock will move slower
 				Local rockanim:tRockAnimator = New tRockAnimator
-				rockanim.init(Rnd(-0.02, 0.05), Rnd(-0.05, 0.05), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+				rockanim.init(Rnd(-velMin, -velMax), Rnd(-velMax, velMax), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
 				rock.addAnimator(rockanim)
 			EndIf
 		Next	
@@ -1525,12 +1563,12 @@ Type tBeginLevelAnimator Extends tAnimator
 
 		Case 2
 			_targetx = 5.0
-			_targety = 5.5
+			_targety = 8.5
 			_targetz = -35.0
 
 		Case 3
 			_targetx = -5.0
-			_targety = 5.5
+			_targety = 8.5
 			_targetz = -35.0
 		EndSelect	
 	EndMethod
@@ -1556,7 +1594,7 @@ Type tBeginLevelAnimator Extends tAnimator
 			
 			Local delta:Float = Sqr(distx * distx + disty * disty + distz * distz)
 			If delta < 0.1
-				core.moveTo(_targetx, _targety, _targetz)
+				'core.moveTo(_targetx, _targety, _targetz)
 
 				game._getready.setparent(game._gui)
 				_initTimeMs = timeMs
@@ -1672,11 +1710,6 @@ Type tWaveCompleteAnimator Extends tAnimator
 	EndMethod
 EndType
 
-Type tGamePlayAnimator Extends tAnimator
-	Method animate(obj:tobject, timeMs:Int)
-	EndMethod
-EndType
-
 Type tRollAnimator Extends tanimator
 	Field _lastTimeMs:Int
 	Field _nextTimeMs:Int
@@ -1762,21 +1795,53 @@ Type tShipAnimator Extends tanimator
 		If KeyHit(KEY_SPACE)
 			Local root:tobject = obj.getroot()
 			Local game:tgame = tgame(root._extra)
+			Local upgrade:Int = 1
 
-			If Not game._bulletstore.isempty()
-				Local velx:Float = Sin(obj._rotz)
-				Local vely:Float = Cos(obj._rotz)
-				Local bullet:tobject = game.getBullet()
-				If bullet
-					Local animator:tBulletAnimator = New tBulletAnimator
-					animator.init(velx, vely, 0.0, 500, timeMs)
+			Local bullet:tobject = game.getBullet()
+			If Not bullet Return
+			
+			PlaySound(game._soundshot)
+
+			Local velx:Float = Sin(obj._rotz)
+			Local vely:Float = Cos(obj._rotz)
+			Local animator:tBulletAnimator = New tBulletAnimator
+			animator.init(velx, vely, 0.0, 500, timeMs)
 		
-					bullet.addAnimator(animator)
-					bullet.setParent(game._gui)
-					bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
-					bullet.setCollisionResponder(New tBulletToRockResponder)
-				EndIf
-			EndIf
+			bullet.addAnimator(animator)
+			bullet.setParent(game._gui)
+					
+			If upgrade = 0
+				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
+				bullet.setCollisionResponder(New tBulletToRockResponder)
+				
+			Else
+				' move the first bullet to the correct position
+				velx :- Sin(obj._rotz + 35) * 2
+				vely :- Cos(obj._rotz + 35) * 2
+				
+				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
+				bullet.setCollisionResponder(New tBulletToRockResponder)
+
+				' create another bullet
+				bullet = game.getbullet()
+				If Not bullet Return
+				
+				velx = Sin(obj._rotz)
+				vely = Cos(obj._rotz)
+				
+				animator = New tBulletAnimator
+				animator.init(velx, vely, 0.0, 500, timeMs)
+				
+				bullet.addAnimator(animator)
+				bullet.setParent(game._gui)
+				
+				velx = Sin(obj._rotz) - Sin(obj._rotz - 35) * 2
+				vely = Cos(obj._rotz) - Cos(obj._rotz - 35) * 2
+				
+				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
+				bullet.setCollisionResponder(New tBulletToRockResponder)
+
+			EndIf				
 		EndIf	
 	EndMethod
 EndType
@@ -1834,33 +1899,7 @@ Type tRotationAnimator Extends tAnimator
 		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._rotz + _rotz)
 	EndMethod
 EndType
-Rem
-Type tVelocityAnimator Extends tAnimator
-	Field _velx:Float
-	Field _vely:Float
-	Field _velz:Float
 
-	Method init(velx:Float, vely:Float, velz:Float)
-		_velx = velx
-		_vely = vely
-		_velz = velz
-	EndMethod
-	
-	Method animate(obj:tobject, timeMs:Int)
-		Local posx:Float = obj._posx
-		Local posy:Float = obj._posy
-		Local posz:Float = obj._posz
-		posx :+ _velx; posy :+ _vely; posz :+ _velz
-		
-		If posy < -18.0 posy = 18.0
-		If posy > 18.0 posy = -18.0
-		If posx < -29.0 posx = 29.0
-		If posx > 29.0 posx = -29.0
-		
-		obj.moveTo(posx, posy, posz)
-	EndMethod
-EndType
-EndRem
 Type tRockAnimator Extends tAnimator
 	Field _velx:Float
 	Field _vely:Float
@@ -1884,10 +1923,10 @@ Type tRockAnimator Extends tAnimator
 		Local posz:Float = obj._posz
 		posx :+ _velx; posy :+ _vely; posz :+ _velz
 		
-		If posy < -18 posy = 18
-		If posy > 18 posy = -18
-		If posx < -29.5 posx = 29.5
-		If posx > 29.5 posx = -29.5
+		If posy < -18 And _vely <= 0.0 posy = 18
+		If posy > 18 And _vely >= 0.0 posy = -18
+		If posx < -29.5 And _velx <= 0.0 posx = 29.5
+		If posx > 29.5 And _velx >= 0.0 posx = -29.5
 		
 		obj.moveTo(posx, posy, posz)
 		obj.rotateTo(obj._rotx + _rotx, obj._roty + _roty, obj._posz + _rotz)
@@ -1951,6 +1990,11 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		Local game:tgame = tgame(root._extra)
 		Local size:Int = tobjectrock(rock)._size - 1
 		
+		' if 'game' is null then we're dealing with a double collision because 2 bullets hit the
+		' same rock and it's already been dealt with in here.
+		' should probably deal with this in the collision manager but this is also a good place to deal with it
+		If Not game Return
+
 		Local scores:Int[] = [100, 50, 20]
 		game._score :+ scores[size]
 
@@ -1973,9 +2017,11 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		Local epicentre:tobject = New tobject
 		epicentre.setparent(game._scene)
 
+		PlaySound(game._rockbreak)
+
 		For Local i:Int = 0 Until 16
 			Local particleanim:tParticleAnimator = New tParticleAnimator
-			particleanim.init(Rnd(-0.5,0.5), Rnd(-0.5,0.5), 0.0, 0.0, 0.0, 0.0, collisionData._timeMs, 800)
+			particleanim.init(Rnd(-0.5,0.5), Rnd(-0.5,0.5), Rnd(-0.5, 0.5), 0.0, 0.0, 0.0, collisionData._timeMs, 200 + tobjectrock(rock)._size * 100)
 			
 			Local particle:tobject = game.getParticle()
 			If particle
@@ -1988,27 +2034,34 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		' split the rock into 2
 		If size <> 0
 			Local newRockCount:Int = 2 ' Rand(2, 3)
-			game._rockstodestroy :+ newRockCount
 			
 			For Local i:Int = 0 Until newRockCount
 				Local rock:tobjectrock = tobjectrock(game.getRock(size))
-				Local vel:Float = (1.0 / rock._size) * (game._currentWave * 0.1)
-				Local velx:Float = Rnd(-vel, vel)
-				Local vely:Float = Rnd(-vel, vel)
-				
-				If velx > -0.01 And velx <= 0.0 velx = -0.01
-				If vely > -0.01 And velx <= 0.0 vely = -0.01
-				If velx < 0.01 And velx >= 0.0 velx = 0.01
-				If vely < 0.01 And vely >= 0.0 vely = 0.01
-				
 				If rock
-					rock.moveTo(posx, posy, posz)
-					rock.setparent(game._gui)
-				
-					' smaller rocks will move faster
-					Local rockanim:tRockAnimator = New tRockAnimator
-					rockanim.init(velx, vely, 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
-					rock.addAnimator(rockanim)
+					game._rockstodestroy :+ 1
+					Local vel:Float = (1.0 / rock._size / 1.5) * ((game._currentWave + 1) * 0.1)
+					Local velx:Float = Rnd(-vel, vel)
+					Local vely:Float = Rnd(-vel, vel)
+					
+					' make sure that the rock is always moving
+					If velx > -0.01 And velx <= 0.0 velx = -0.01
+					If vely > -0.01 And velx <= 0.0 vely = -0.01
+					If velx < 0.01 And velx >= 0.0 velx = 0.01
+					If vely < 0.01 And vely >= 0.0 vely = 0.01
+					
+					' but don't let it move too fast
+					velx = Min(Max(-0.35,velx), 0.35)
+					vely = Min(Max(-0.35,vely), 0.35)
+					
+					If rock
+						rock.moveTo(posx, posy, posz)
+						rock.setparent(game._gui)
+						
+						' smaller rocks will move faster
+						Local rockanim:tRockAnimator = New tRockAnimator
+						rockanim.init(velx, vely, 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+						rock.addAnimator(rockanim)
+					EndIf
 				EndIf
 			Next
 		EndIf
@@ -2112,6 +2165,7 @@ EndType
 
 AppTitle = "Star-Roids"
 
+SeedRnd(MilliSecs() * MilliSecs())
 HideMouse()
 Local game:tGame = New tGame
 game.init(1200, 700)
