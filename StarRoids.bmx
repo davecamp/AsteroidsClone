@@ -13,53 +13,353 @@ Import srs.directx11
 Const RENDERFLAG_SOLID:Int = 1
 Const RENDERFLAG_WIREFRAME:Int = 2
 
-Global shipMeshDataWireframe:String
-shipMeshDataWireframe :+ "linelist~n"
-shipMeshDataWireframe :+ "v -0.5 -0.8 0.0~n"
-shipMeshDataWireframe :+ "v 0.0 0.8 0.0~n"
-shipMeshDataWireframe :+ "v 0.5 -0.8 0.0~n"
-shipMeshDataWireframe :+ "v 0.25 -0.5 0.0~n"
-shipMeshDataWireframe :+ "v -0.25 -0.5 0.0~n"
-shipMeshDataWireframe :+ "v 0.0 0.2 0.0~n"
-shipMeshDataWireframe :+ "v 0.0 -0.3 0.0~n"
-shipMeshDataWireframe :+ "f 0 1 1 2 2 3 3 4 4 0 5 6"
+Type tMeshData	
+	Method shipWireframe:String()
+		Local mesh:String
+		mesh :+ "linestrip~n"
+		mesh :+ "v -0.5 -0.8 0.0~n"
+		mesh :+ "v 0.0 0.8 0.0~n"
+		mesh :+ "v 0.5 -0.8 0.0~n"
+		mesh :+ "v 0.25 -0.5 0.0~n"
+		mesh :+ "v -0.25 -0.5 0.0~n"
+		mesh :+ "v 0.0 0.2 0.0~n"
+		mesh :+ "v 0.0 -0.3 0.0~n"
+		mesh :+ "f 0 1 2 3 4 0 -1 5 6"
+		
+		Return mesh
+	EndMethod
+	
+	Method shipUpgradeWireframe:String()
+		Local mesh:String
+		mesh :+ "linelist~n"
+		mesh :+ "v -2.0 -4 0.0~n"
+		mesh :+ "v -2.0 1.0 0.0~n"
+		mesh :+ "v 2.0 1.0 0.0~n"
+		mesh :+ "v 2.0 -4 0.0~n"
+		mesh :+ "v -6.0 -3.0 0.0~n"
+		mesh :+ "v -6.0 -1.0 0.0~n"
+		mesh :+ "v -2.0 0.0 0.0~n"
+		mesh :+ "v 6.0 -3.0 0.0~n"
+		mesh :+ "v 6.0 -1.0 0.0~n"
+		mesh :+ "v 2.0 0.0 0.0~n"
+		mesh :+ "v -1.0 5.0 0.0~n"
+		mesh :+ "v 1.0 5.0 0.0~n"
+		mesh :+ "v -1.25 4.0 0.0~n"
+		mesh :+ "v -2.9 3.25 0.0~n"
+		mesh :+ "v -2.9 2.25 0.0~n"
+		mesh :+ "v -1.75 2.0 0.0~n"
+		mesh :+ "v 1.25 4.0 0.0~n"
+		mesh :+ "v 2.9 3.25 0.0~n"
+		mesh :+ "v 2.9 2.25 0.0~n"
+		mesh :+ "v 1.75 2.0 0.0~n"
+		mesh :+ "f 0 1 1 2 2 3 3 0~n"
+		mesh :+ "f 0 4 4 5 5 6~n"
+		mesh :+ "f 3 7 7 8 8 9~n"
+		mesh :+ "f 1 10 10 11 11 2~n"
+		mesh :+ "f 12 13 13 14 14 15~n"
+		mesh :+ "f 16 17 17 18 18 19~n"
+		
+		Return mesh
+	EndMethod
 
-Global shipUpgradeMeshDataWireframe:String
-shipUpgradeMeshDataWireframe :+ "linelist~n"
-shipUpgradeMeshDataWireframe :+ "v -2.0 -4 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -2.0 1.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 2.0 1.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 2.0 -4 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -6.0 -3.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -6.0 -1.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -2.0 0.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 6.0 -3.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 6.0 -1.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 2.0 0.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -1.0 5.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 1.0 5.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -1.25 4.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -2.9 3.25 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -2.9 2.25 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v -1.75 2.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 1.25 4.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 2.9 3.25 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 2.9 2.25 0.0~n"
-shipUpgradeMeshDataWireframe :+ "v 1.75 2.0 0.0~n"
-shipUpgradeMeshDataWireframe :+ "f 0 1 1 2 2 3 3 0~n"
-shipUpgradeMeshDataWireframe :+ "f 0 4 4 5 5 6~n"
-shipUpgradeMeshDataWireframe :+ "f 3 7 7 8 8 9~n"
-shipUpgradeMeshDataWireframe :+ "f 1 10 10 11 11 2~n"
-shipUpgradeMeshDataWireframe :+ "f 12 13 13 14 14 15~n"
-shipUpgradeMeshDataWireframe :+ "f 16 17 17 18 18 19~n"
+	Method powerupShipSolid:String()
+		Local mesh:String
+		mesh :+ "trianglelist~n"
+		mesh :+ "v -2.5 -2.5 -2.5~n"
+		mesh :+ "v -2.5 2.5 -2.5~n"
+		mesh :+ "v 2.5 2.5 -2.5~n"
+		mesh :+ "v 2.5 -2.5 -2.5~n"
+		mesh :+ "v -2.5 -2.5 2.5~n"
+		mesh :+ "v -2.5 2.5 2.5~n"
+		mesh :+ "v 2.5 2.5 2.5~n"
+		mesh :+ "v 2.5 -2.5 2.5~n"
 
-Global bulletMeshData:String
-bulletMeshData :+ "linelist~n"
-bulletMeshData :+ "v -0.03 -0.03 0.0~n"
-bulletMeshData :+ "v -0.03 0.03 0.0~n"
-bulletMeshData :+ "v 0.03 0.03 0.0~n"
-bulletMeshData :+ "v 0.03 -0.03 0.0~n"
-bulletMeshData :+ "f 0 1 2 3 0~n"
+		mesh :+ "f 0 1 2 0 2 3~n"
+		mesh :+ "f 3 2 6 3 6 7~n"
+		mesh :+ "f 4 5 1 4 1 0~n"
+		mesh :+ "f 7 6 5 7 5 4~n"
+
+		Return mesh
+	EndMethod
+
+	Method powerupShipWireframe:String()
+		Local mesh:String
+		mesh :+ "linelist~n"
+		mesh :+ "v -2.5 -2.5 -2.5~n"
+		mesh :+ "v -2.5 2.5 -2.5~n"
+		mesh :+ "v 2.5 2.5 -2.5~n"
+		mesh :+ "v 2.5 -2.5 -2.5~n"
+		mesh :+ "v -2.5 -2.5 2.5~n"
+		mesh :+ "v -2.5 2.5 2.5~n"
+		mesh :+ "v 2.5 2.5 2.5~n"
+		mesh :+ "v 2.5 -2.5 2.5~n"
+		mesh :+ "f 0 1 1 2 2 3 3 0 -1~n"
+		mesh :+ "f 3 2 2 6 6 7 7 3 -1~n"
+		mesh :+ "f 4 5 5 6 6 7 7 4 -1~n"
+		mesh :+ "f 0 1 1 5 5 4 4 0 -1~n"
+		
+		mesh :+ "v -0.6 -1.2 2.5~n"
+		mesh :+ "v -0.6 0.3 2.5~n"
+		mesh :+ "v 0.6 0.3 2.5~n"
+		mesh :+ "v 0.6 -1.2 2.5~n"
+		mesh :+ "v -1.8 -0.9 2.5~n"
+		mesh :+ "v -1.8 -0.3 2.5~n"
+		mesh :+ "v -0.6 0.0 2.5~n"
+		mesh :+ "v 1.8 -0.9 2.5~n"
+		mesh :+ "v 1.8 -0.3 2.5~n"
+		mesh :+ "v 0.6 0.0 2.5~n"
+		mesh :+ "v -0.3 1.5 2.5~n"
+		mesh :+ "v 0.3 1.5 2.5~n"
+		mesh :+ "v -0.375 1.2 2.5~n"
+		mesh :+ "v -0.87 0.975 2.5~n"
+		mesh :+ "v -0.87 0.675 2.5~n"
+		mesh :+ "v -0.525 0.6 2.5~n"
+		mesh :+ "v 0.375 1.2 2.5~n"
+		mesh :+ "v 0.87 0.975 2.5~n"
+		mesh :+ "v 0.87 0.675 2.5~n"
+		mesh :+ "v 0.525 0.6 2.5~n"
+		
+		mesh :+ "f 8 9 9 10 10 11 11 8~n"
+		mesh :+ "f 8 12 12 13 13 14~n"
+		mesh :+ "f 11 15 15 16 16 17~n"
+		mesh :+ "f 9 18 18 19 19 10~n"
+		mesh :+ "f 20 21 21 22 22 23~n"
+		mesh :+ "f 24 25 25 26 26 27~n"
+		
+		mesh :+ "v -0.6 -1.2 -2.5~n"
+		mesh :+ "v -0.6 0.3 -2.5~n"
+		mesh :+ "v 0.6 0.3 -2.5~n"
+		mesh :+ "v 0.6 -1.2 -2.5~n"
+		mesh :+ "v -1.8 -0.9 -2.5~n"
+		mesh :+ "v -1.8 -0.3 -2.5~n"
+		mesh :+ "v -0.6 0.0 -2.5~n"
+		mesh :+ "v 1.8 -0.9 -2.5~n"
+		mesh :+ "v 1.8 -0.3 -2.5~n"
+		mesh :+ "v 0.6 0.0 -2.5~n"
+		mesh :+ "v -0.3 1.5 -2.5~n"
+		mesh :+ "v 0.3 1.5 -2.5~n"
+		mesh :+ "v -0.375 1.2 -2.5~n"
+		mesh :+ "v -0.87 0.975 -2.5~n"
+		mesh :+ "v -0.87 0.675 -2.5~n"
+		mesh :+ "v -0.525 0.6 -2.5~n"
+		mesh :+ "v 0.375 1.2 -2.5~n"
+		mesh :+ "v 0.87 0.975 -2.5~n"
+		mesh :+ "v 0.87 0.675 -2.5~n"
+		mesh :+ "v 0.525 0.6 -2.5~n"
+		
+		mesh :+ "f 28 29 29 30 30 31 31 28~n"
+		mesh :+ "f 28 32 32 33 33 34~n"
+		mesh :+ "f 31 35 35 36 36 37~n"
+		mesh :+ "f 29 38 38 39 39 30~n"
+		mesh :+ "f 40 41 41 42 42 43~n"
+		mesh :+ "f 44 45 45 46 46 47~n"
+		
+		mesh :+ "v -2.5 -1.2 -0.6~n"
+		mesh :+ "v -2.5 0.3 -0.6~n"
+		mesh :+ "v -2.5 0.3 0.6~n"
+		mesh :+ "v -2.5 -1.2 0.6~n"
+		mesh :+ "v -2.5 -0.9 -1.8~n"
+		mesh :+ "v -2.5 -0.3 -1.8~n"
+		mesh :+ "v -2.5 0.0 -0.6~n"
+		mesh :+ "v -2.5 -0.9 1.8~n"
+		mesh :+ "v -2.5 -0.3 1.8~n"
+		mesh :+ "v -2.5 0.0 0.6~n"
+		mesh :+ "v -2.5 1.5 -0.3~n"
+		mesh :+ "v -2.5 1.5 0.3~n"
+		mesh :+ "v -2.5 1.2 -0.375~n"
+		mesh :+ "v -2.5 0.975 -0.87~n"
+		mesh :+ "v -2.5 0.675 -0.87~n"
+		mesh :+ "v -2.5 0.6 -0.525~n"
+		mesh :+ "v -2.5 1.2 0.375~n"
+		mesh :+ "v -2.5 0.975 0.87~n"
+		mesh :+ "v -2.5 0.675 0.87~n"
+		mesh :+ "v -2.5 0.6 0.525~n"
+		
+		mesh :+ "f 48 49 49 50 50 51 51 48~n"
+		mesh :+ "f 48 52 52 53 53 54~n"
+		mesh :+ "f 51 55 55 56 56 57~n"
+		mesh :+ "f 49 58 58 59 59 50~n"
+		mesh :+ "f 60 61 61 62 62 63~n"
+		mesh :+ "f 64 65 65 66 66 67~n"
+		
+		mesh :+ "v 2.5 -1.2 -0.6~n"
+		mesh :+ "v 2.5 0.3 -0.6~n"
+		mesh :+ "v 2.5 0.3 0.6~n"
+		mesh :+ "v 2.5 -1.2 0.6~n"
+		mesh :+ "v 2.5 -0.9 -1.8~n"
+		mesh :+ "v 2.5 -0.3 -1.8~n"
+		mesh :+ "v 2.5 0.0 -0.6~n"
+		mesh :+ "v 2.5 -0.9 1.8~n"
+		mesh :+ "v 2.5 -0.3 1.8~n"
+		mesh :+ "v 2.5 0.0 0.6~n"
+		mesh :+ "v 2.5 1.5 -0.3~n"
+		mesh :+ "v 2.5 1.5 0.3~n"
+		mesh :+ "v 2.5 1.2 -0.375~n"
+		mesh :+ "v 2.5 0.975 -0.87~n"
+		mesh :+ "v 2.5 0.675 -0.87~n"
+		mesh :+ "v 2.5 0.6 -0.525~n"
+		mesh :+ "v 2.5 1.2 0.375~n"
+		mesh :+ "v 2.5 0.975 0.87~n"
+		mesh :+ "v 2.5 0.675 0.87~n"
+		mesh :+ "v 2.5 0.6 0.525~n"
+		
+		mesh :+ "f 68 69 69 70 70 71 71 68~n"
+		mesh :+ "f 68 72 72 73 73 74~n"
+		mesh :+ "f 71 75 75 76 76 77~n"
+		mesh :+ "f 69 78 78 79 79 70~n"
+		mesh :+ "f 80 81 81 82 82 83~n"
+		mesh :+ "f 84 85 85 86 86 87~n"
+		
+		mesh :+ "v 2.5 0.1 1.5~n"
+		mesh :+ "v 2.5 0.6 1.5~n"
+		mesh :+ "v 2.5 1.4 1.5~n"
+		mesh :+ "v 2.5 1.9 1.5~n"
+		mesh :+ "v 2.5 0.1 -1.5~n"
+		mesh :+ "v 2.5 0.6 -1.5~n"
+		mesh :+ "v 2.5 1.4 -1.5~n"
+		mesh :+ "v 2.5 1.9 -1.5~n"
+		mesh :+ "f 88 89 90 91 92 93 94 95~n"
+		
+		mesh :+ "v -2.5 0.1 1.5~n"
+		mesh :+ "v -2.5 0.6 1.5~n"
+		mesh :+ "v -2.5 1.4 1.5~n"
+		mesh :+ "v -2.5 1.9 1.5~n"
+		mesh :+ "v -2.5 0.1 -1.5~n"
+		mesh :+ "v -2.5 0.6 -1.5~n"
+		mesh :+ "v -2.5 1.4 -1.5~n"
+		mesh :+ "v -2.5 1.9 -1.5~n"
+		mesh :+ "f 96 97 98 99 100 101 102 103~n"
+
+		mesh :+ "v 1.5 0.1 2.5~n"
+		mesh :+ "v 1.5 0.6 2.5~n"
+		mesh :+ "v 1.5 1.4 2.5~n"
+		mesh :+ "v 1.5 1.9 2.5~n"
+		mesh :+ "v -1.5 0.1 2.5~n"
+		mesh :+ "v -1.5 0.6 2.5~n"
+		mesh :+ "v -1.5 1.4 2.5~n"
+		mesh :+ "v -1.5 1.9 2.5~n"
+		mesh :+ "f 104 105 106 107 108 109 110 111~n"
+		
+		mesh :+ "v 1.5 0.1 -2.5~n"
+		mesh :+ "v 1.5 0.6 -2.5~n"
+		mesh :+ "v 1.5 1.4 -2.5~n"
+		mesh :+ "v 1.5 1.9 -2.5~n"
+		mesh :+ "v -1.5 0.1 -2.5~n"
+		mesh :+ "v -1.5 0.6 -2.5~n"
+		mesh :+ "v -1.5 1.4 -2.5~n"
+		mesh :+ "v -1.5 1.9 -2.5~n"
+		mesh :+ "f 112 113 114 115 116 117 118 119"
+
+
+		Return mesh
+	EndMethod
+
+	Method bulletWireframe:String()
+		Local mesh:String
+		mesh :+ "linelist~n"
+		mesh :+ "v -0.03 -0.03 0.0~n"
+		mesh :+ "v -0.03 0.03 0.0~n"
+		mesh :+ "v 0.03 0.03 0.0~n"
+		mesh :+ "v 0.03 -0.03 0.0~n"
+		mesh :+ "f 0 1 2 3 0~n"
+		
+		Return mesh
+	EndMethod
+	
+	Method alienBulletWireframe:String()
+		Local mesh:String
+		mesh :+ "linelist~n"
+		mesh :+ "v -1.0 0.0 0.0~n"
+		mesh :+ "v 1.0 0.0 0.0~n"
+		mesh :+ "v 0.0 -1.0 0.0~n"
+		mesh :+ "v 0.0 1.0 0.0~n"
+		mesh :+ "v 0.0 0.0 -1.0~n"
+		mesh :+ "v 0.0 0.0 1.0~n"
+		mesh :+ "f 0 1 2 3 4 5"
+		
+		Return mesh
+	EndMethod
+
+	Method alienBigWireframe:String()
+		Local mesh:String
+		mesh :+ "linelist~n"
+		mesh :+ "v 0.0 0.0 1.0~n"
+		mesh :+ "v 0.2 0.1 0.77~n"
+		mesh :+ "v 0.38 -0.1 1.44~n"
+		mesh :+ "v 0.49 0.0 0.86~n"
+		
+		mesh :+ "v 0.7 0.0 0.7~n"
+		mesh :+ "v 0.69 0.1 0.4~n"
+		mesh :+ "v 1.29 -0.1 0.75~n"
+		mesh :+ "v 0.96 0.0 0.25~n"
+		
+		mesh :+ "v 1.0 0. 0.0 ~n"
+		mesh :+ "v 0.77 0.1 -0.2~n"
+		mesh :+ "v 1.44 -0.1 -0.38~n"
+		mesh :+ "v 0.86 0.0 -0.49~n"
+		
+		mesh :+ "v 0.7 0.0 -0.7~n"
+		mesh :+ "v 0.39 0.1 -0.66~n"
+		mesh :+ "v 0.75 -0.1 -1.29~n"
+		mesh :+ "v 0.35 0.0 -0.96~n"
+
+		mesh :+ "v 0.0 0.0 -1.0~n"
+		mesh :+ "v -0.2 0.1 -0.77~n"
+		mesh :+ "v -0.38 -0.1 -1.44~n"
+		mesh :+ "v -0.5 0.0 -0.86~n"
+		
+		mesh :+ "v -0.7 0.0 -0.7~n"
+		mesh :+ "v -0.69 0.1 -0.4~n"
+		mesh :+ "v -1.29 -0.1 -0.75~n"
+		mesh :+ "v -0.96 0.0 -0.25~n"
+		
+		mesh :+ "v -1.0 0.0 0.0~n"
+		mesh :+ "v -0.77 0.1 0.2~n"
+		mesh :+ "v -1.44 -0.1 0.38~n"
+		mesh :+ "v -0.86 0.0 0.5~n"
+		
+		mesh :+ "v -0.7 0.0 0.7~n"
+		mesh :+ "v -0.4 0.1 0.69~n"
+		mesh :+ "v -0.75 -0.1 1.29~n"
+		mesh :+ "v -0.25 0.0 0.96~n"
+		
+		mesh :+ "f 0 1 1 3 3 2 2 0~n"
+		mesh :+ "f 4 5 5 7 7 6 6 4~n"
+		mesh :+ "f 8 9 9 11 11 10 10 8"
+		mesh :+ "f 12 13 13 15 15 14 14 12~n"
+		mesh :+ "f 16 17 17 19 19 18 18 16~n"
+		mesh :+ "f 20 21 21 23 23 22 22 20~n"
+		mesh :+ "f 24 25 25 27 27 26 26 24~n"
+		mesh :+ "f 28 29 29 31 31 30 30 28~n"
+		
+		mesh :+ "f 3 4 7 8 11 12 15 16 19 20 23 24 27 28 31 0~n"
+		mesh :+ "f 1 5 5 9 9 13 13 17 17 21 21 25 25 29 29 1~n"
+		
+		mesh :+ "v 0.38 -0.2 1.44~n"
+		mesh :+ "v 1.29 -0.2 0.75~n"
+		mesh :+ "v 1.44 -0.2 -0.38~n"
+		mesh :+ "v 0.75 -0.2 -1.29~n"
+		mesh :+ "v -0.38 -0.2 -1.44~n"
+		mesh :+ "v -1.29 -0.2 -0.75~n"
+		mesh :+ "v -1.44 -0.2 0.38~n"
+		mesh :+ "v -0.75 -0.2 1.29~n"
+		'mesh :+ "f 2 32 6 33 10 34 14 35 18 36 22 37 26 38 30 39~n"
+		
+		'mesh :+ "f 32 33 33 34"
+		
+		Return mesh
+	EndMethod
+	
+	Method alienSmallWireframe:String()
+		Local mesh:String
+		Return mesh
+	EndMethod
+	
+	Method alienSmallSolid:String()
+		Local mesh:String
+		Return mesh
+	EndMethod
+EndType
 
 Type tAsteroid	
 	Method Create:String()
@@ -202,7 +502,7 @@ Type tFont
 		_glyphs[3] = New tGlyph.Create([4, 14, 14, 10, 10, 0, 12, 2])         ' 3
 		_glyphs[4] = New tGlyph.Create([4, 1, 1, 11, 10, 14])                 ' 4
 		_glyphs[5] = New tGlyph.Create([14, 4, 4, 2, 2, 12, 12, 10, 10, 0])   ' 5
-		_glyphs[6] = New tGlyph.Create([4, 0, 0, 10, 10, 12, 12, 1])          ' 6
+		_glyphs[6] = New tGlyph.Create([4, 0, 0, 10, 10, 12, 12, 2])          ' 6
 		_glyphs[7] = New tGlyph.Create([4, 14, 14, 10])                       ' 7
 		_glyphs[8] = New tGlyph.Create([0, 4, 4, 14, 14, 10, 10, 0, 2, 12])   ' 8
 		_glyphs[9] = New tGlyph.Create([10, 14, 14, 4, 4, 2, 2, 12])          ' 9
@@ -263,6 +563,7 @@ Type tFont
 			Local glyph:tglyph = _glyphs[glyphIndex]
 			
 			For Local index:Int = EachIn glyph._indices
+				If index = -1 Continue
 				' use i as an offset to push each letter to the right
 				Local vertex:Float[] = [ _vertices[index * 3 + 0] + x + 0.5, _vertices[index * 3 + 1] + y + 0.5, _vertices[index * 3 + 2] ]
 				mesh._vertices :+ vertex
@@ -270,7 +571,7 @@ Type tFont
 			
 			x :+ 1
 		Next
-		
+
 		mesh._indices = New Int[mesh._vertices.length / 3]
 		For Local index:Int = 0 Until mesh._indices.length
 			mesh._indices[index] = index
@@ -591,9 +892,18 @@ Type tGame
 	Field _scene:tobject
 	Field _gui:tobject
 
+	Field _meshdata:tMeshData
+
 	Field _ship:tobject
-	Field _rockstore:TList
+	Field _shipupgrade:tobject
+	Field _shippowerup:tobject
 	
+	Field _alienShip:tobject ' will be alienBig or alienSmall
+	Field _alienbig:tobject
+	Field _alienShipController:tAlienShipControlAnimator
+	Field _alienbullet:tobject
+
+	Field _rockstore:TList
 	Field _particleStore:TList
 	
 	Field _font:tFont
@@ -619,14 +929,22 @@ Type tGame
 		
 	Field _bulletstore:TList
 	
-	Field _soundShot:TSound
-	Field _rockbreak:TSound
+	Field _sampleShot:TSound
+	Field _sampleLife:TSound
+	Field _sampleThrust:TSound
+	Field _sampleRocks:TSound[3]
+	Field _sampleAlien:TSound[2]	
+	Field _sampleThump:TSound[2]
+	Field _channelAlien:TChannel
 	
 	Const COLLISION_ID_SHIP:Int = 1
 	Const COLLISION_ID_BULLET:Int = 2
 	Const COLLISION_ID_ROCK:Int = 3
+	Const COLLISION_ID_ALIEN:Int = 4
+	Const COLLISION_ID_ALIEN_BULLET:Int = 5
 
 	Method init(Width:Int, Height:Int)
+		_meshdata = New tMeshData
 		_particleStore = New TList
 		_bulletstore = New TList
 		_rockstore = New TList
@@ -637,9 +955,13 @@ Type tGame
 		_root.setExtra(Self)
 		
 		Local collisionManager:tCollisionManager = New tCollisionManager
-		collisionManager.addCollidableIds(COLLISION_ID_SHIP, COLLISION_ID_ROCK)
-		collisionManager.addCollidableIds(COLLISION_ID_BULLET, COLLISION_ID_ROCK)
+		collisionManager.addCollidableIds(COLLISION_ID_SHIP, COLLISION_ID_ROCK, New tShipToRockHandler)
+		collisionManager.addCollidableIds(COLLISION_ID_BULLET, COLLISION_ID_ROCK, New tBulletToRockHandler)
+		collisionManager.addCollidableIds(COLLISION_ID_BULLET, COLLISION_ID_ALIEN, New tShipBulletToAlienHandler)
 		_root.addAnimator(collisionManager)
+		
+		_alienShipController = New tAlienShipControlAnimator
+		_root.addAnimator(_alienShipController)
 		
 		' setup the game scene object
 		_scene = New tobject
@@ -665,9 +987,15 @@ Type tGame
 	
 	Method createGameObjects()
 		' sounds
-		_soundshot = LoadSound("sounds/shot.wav")
-		_rockbreak = LoadSound("sounds/rockbreak.wav")
+		_sampleShot = LoadSound("sounds/sfire.wav")
+		_sampleRocks[0] = LoadSound("sounds/explode3.wav")
+		_sampleRocks[1] = LoadSound("sounds/explode2.wav")
+		_sampleRocks[2] = LoadSound("sounds/explode1.wav")
+		_sampleAlien[0] = LoadSound("sounds/lsaucer.wav", SOUND_LOOP)
+		_sampleAlien[1] = LoadSound("sounds/ssaucer.wav", SOUND_LOOP)
+		_sampleLife = LoadSound("sounds/life.wav")
 		
+		' font
 		_font = New tFont
 		
 		' score
@@ -723,7 +1051,7 @@ Type tGame
 		Local planetrotation:tRotationAnimator = New tRotationAnimator
 		planetrotation.init(0.0, -0.1, 0.0)
 		_planet.addAnimator(planetrotation)
-		_planet.setcolour(0.3, 0.3, 0.3, 1.0)
+		_planet.setcolourWireframe(0.3, 0.3, 0.3, 1.0)
 
 		' logo asteroid belt
 		Local titlebeltmeshdata:String = New tasteroidbelt.Create()
@@ -735,7 +1063,7 @@ Type tGame
 		belt.setname("belt")
 		
 		_titlebelt = New tobject.Create(_pipeline._device, titlebeltmesh, belt, RENDERFLAG_WIREFRAME)
-		_titlebelt.setColour(0.6, 0.6, 0.6, 1.0)
+		_titlebelt.setColourWireframe(0.6, 0.6, 0.6, 1.0)
 		_titlebelt.setname("title asteroid belt")
 
 		Local rotation:tRotationAnimator = New tRotationAnimator
@@ -772,18 +1100,51 @@ Type tGame
 		_copyright.addAnimator(textRoller)
 
 		' create ship
-		Local shipmesh:tmesh = parsemeshdata(shipMeshDataWireframe, 1)
-		Local shipupgrademesh:tmesh = parsemeshdata(shipUpgradeMeshDataWireframe, 0.2)
-		_ship = New tobject.Create(_pipeline._device, shipupgrademesh, _gui, RENDERFLAG_WIREFRAME)
+		Local shipmesh:tmesh = parsemeshdata(_meshdata.shipWireframe(), 1.0)
+		_ship = New tobject.Create(_pipeline._device, shipmesh, Null, RENDERFLAG_WIREFRAME)
 		_ship.setName("ship")
 		Local shipAnimator:tShipAnimator = New tShipAnimator
 		_ship.addAnimator(shipAnimator)
 		_ship.setCollisionId(COLLISION_ID_SHIP)
 		_ship.setCollisionRadius(0.7)
+
+		' upgraded ship
+		Local shipupgrademesh:tmesh = parsemeshdata(_meshdata.shipUpgradeWireframe(), 0.2)
+		_shipupgrade = New tobject.Create(_pipeline._device, shipupgrademesh, Null, RENDERFLAG_WIREFRAME)
+		_shipupgrade.setName("upgradedship")
+		_shipupgrade.addAnimator(shipAnimator)
+		_shipupgrade.setCollisionId(COLLISION_ID_SHIP)
+		_shipupgrade.setCollisionRadius(0.8)
+		
+		' powerupship
+		Local powerupshipmeshsolid:tmesh = parsemeshdata(_meshdata.powerupshipsolid(), 0.25)
+		Local powerupshipmeshwireframe:tmesh = parsemeshdata(_meshdata.powerupshipWireframe(), 0.254)
+		_shipPowerUp:tobject = New tobject.Create(_pipeline._device, powerupshipmeshsolid, Null, RENDERFLAG_SOLID)
+		Local powerupshipwireframe:tobject = New tobject.Create(_pipeline._device, powerupshipmeshwireframe, _shipPowerUp, RENDERFLAG_WIREFRAME)
+		_shipPowerUp.moveto(0.0, 0.0, -20)
+		'Local powerupShipAnim:tAlienShipAnimator = New tAlienShipAnimator
+		'powerupShipAnim.init(0.00, 0.00, 0.00, 0.0, -1.5, 0.0, 0)
+		'_shipPowerUp.addAnimator(powerupShipAnim)
+
+		' alien big ship
+		Local alienbigoutline:tmesh = parseMeshData(_meshdata.alienbigwireframe(), 1.0)
+		alienbigoutline.scale(1.0, 2.0, 1.0)	
+		_alienbig = New tobject.Create(_pipeline._device, alienbigoutline, Null, RENDERFLAG_WIREFRAME)
+		
+		_alienbig.setCollisionId(COLLISION_ID_ALIEN)
+		_alienbig.setCollisionRadius(1.0)
+		_alienbig.setname("alienBig")
+
+		' alien bullet
+		_alienBullet = New tObject.Create(_pipeline._device, parseMeshData(_meshdata.alienbulletWireframe(), 0.2), _gui, RENDERFLAG_WIREFRAME)
+		Local alienBulletAnim:tRotationAnimator = New tRotationAnimator
+		alienBulletAnim.init(-20, 20, -20)
+		_alienBullet.addAnimator(alienBulletAnim)
+		_alienBullet.setCollisionRadius(0.2)
 		
 		' create bullets
-		Local bulletMesh:tMesh = parsemeshdata(bulletMeshData, 1.0)
-		For Local i:Int = 0 Until 32
+		Local bulletMesh:tMesh = parsemeshdata(_meshdata.bulletWireframe(), 1.0)
+		For Local i:Int = 0 Until 36
 			Local bullet:tobject = New tobject.Create(_pipeline._device, bulletMesh, Null, RENDERFLAG_WIREFRAME)
 			bullet.setCollisionId(COLLISION_ID_BULLET)
 			bullet.setCollisionRadius(0.1)
@@ -1043,7 +1404,6 @@ Type tGame
 	EndMethod
 	
 	Method beginGameLevel()
-		_ship.setparent(_gui)
 		_rocksToDestroy = 0
 
 		Local velMin:Float = 0.02 + ((_currentWave + 1) / 200.0)
@@ -1051,9 +1411,11 @@ Type tGame
 
 		Local wave:Int = _currentWave
 		If wave > 5 wave = 5
+
+		_alienShipController.init(MilliSecs(), True)
 		
 		' top edge
-		For Local i:Int = 0 Until (6 + wave) / 4
+		For Local i:Int = 0 Until (3 + wave) / 3
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
@@ -1069,7 +1431,7 @@ Type tGame
 		Next
 
 		' bottom edge
-		For Local i:Int = 0 Until (6 + wave) / 4
+		For Local i:Int = 0 Until (3 + wave) / 3
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
@@ -1085,7 +1447,7 @@ Type tGame
 		Next
 
 		' left edge
-		For Local i:Int = 0 Until (6 + wave) / 4
+		For Local i:Int = 0 Until (3 + wave) / 4
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
@@ -1101,7 +1463,7 @@ Type tGame
 		Next
 
 		' righttedge
-		For Local i:Int = 0 Until (6 + wave) / 4
+		For Local i:Int = 0 Until (3 + wave) / 4
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
@@ -1123,14 +1485,14 @@ Type tGame
 	EndMethod
 
 	Method updategame()
-		updategamelogic(MilliSecs())		
+		updategamelogic(MilliSecs())
 		rendergame()
 	EndMethod
 
 	Method updategamelogic(timeMs:Int)
 		If KeyDown(KEY_ESCAPE) _gamestate = -1
 
-		_root.update(timeMs:Int)
+		_root.update(timeMs)
 	EndMethod
 
 	Method rendergame()
@@ -1193,7 +1555,7 @@ Type tGame
 		rendersolids(_gui)
 		renderwireframes(_gui)
 	EndMethod
-	
+
 	Method shutdown()
 	EndMethod
 EndType
@@ -1235,9 +1597,10 @@ Type tobject
 	
 	Field _collisionId:Int
 	Field _collisionRadius:Float
-	Field _collisionResponder:tCollisionResponder
 	
-	Field _colour:Float[4]
+	Field _colourWireframe:Float[4]
+	Field _colourSolid:Float[4]
+
 	Field _renderFlag:Int
 
 	Method New()
@@ -1246,7 +1609,8 @@ Type tobject
 		math.identitym4(_local)
 		math.identitym4(_world)
 		
-		_colour = [1.0, 1.0, 1.0, 1.0]
+		_colourWireframe = [1.0, 1.0, 1.0, 1.0]
+		_colourSolid = [0.0, 0.0, 0.0, 1.0]
 	EndMethod
 	
 	Method Create:tobject(device:ID3D11Device, mesh:tmesh, parent:tobject, renderFlag:Int)
@@ -1330,10 +1694,15 @@ Type tobject
 		_collisionRadius = radius
 	EndMethod
 	
-	Method setCollisionResponder(responder:tCollisionResponder)
-		_collisionResponder = responder
+	Method setColourWireframe(r:Float, g:Float, b:Float, a:Float)
+		_colourWireframe[0] = r; _colourWireframe[1] = g; _colourWireframe[2] = b; _colourWireframe[3] = a
+	EndMethod
+	
+	Method setColourSolid(r:Float, g:Float, b:Float, a:Float)
+		_colourSolid[0] = r; _colourSolid[1] = g; _colourSolid[2] = b; _colourSolid[3] = a
 	EndMethod
 
+	
 	Method moveTo(x:Float, y:Float, z:Float)
 		_posx = x; _posy = y; _posz = z
 	EndMethod
@@ -1385,19 +1754,14 @@ Type tobject
 		_local[11] = _posz		
 	EndMethod
 	
-	Method setColour(r:Float, g:Float, b:Float, a:Float)
-		_colour[0] = r; _colour[1] = g; _colour[2] = b; _colour[3] = a
-	EndMethod
-	
 	Method renderSolid(context:ID3D11DeviceContext)
 		If _renderflag & RENDERFLAG_SOLID
-			' everything rendered solid is black
 			Local root:tobject = getRoot()
 			Local game:tgame = tgame(root._extra)
 			
 			Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
 			context.Map(game._psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
-			MemCopy(map.pData, [0.0, 0.0, 0.0, 1.0], 16)
+			MemCopy(map.pData, _colourSolid, 16)
 			context.Unmap(game._psConstants, 0)
 
 			render(context)
@@ -1415,7 +1779,7 @@ Type tobject
 			
 			Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
 			context.Map(game._psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
-			MemCopy(map.pData, _colour, 16)
+			MemCopy(map.pData, _colourWireframe, 16)
 			context.Unmap(game._psConstants, 0)
 			
 			render(context)
@@ -1487,8 +1851,6 @@ Type tobjectScore Extends tobject
 	EndMethod
 	
 	Method renderWireframe(context:ID3D11DeviceContext)
-		'Local root:tobject = getroot()
-		'Local game:tgame = tgame(root._extra)
 		Local score:String
 		If(_scorepointer)
 			score = _scorepointer[0]
@@ -1513,6 +1875,70 @@ Type tobjectScore Extends tobject
 	EndMethod
 EndType
 
+Rem
+Type tobjectAlienShip Extends tObject
+	Field _wireObject:tObject
+
+	Method Create:tobjectAlienShip(device:ID3D11Device, solidmesh:tmesh, parent:tobject, renderFlag:Int)
+		Super.Create(device, solidMesh, parent, renderflag)
+		
+		Return Self
+	EndMethod
+	
+	Method setWireframeObject(device:ID3D11Device, wireframeMesh:tMesh, parent:tobject)
+		_wireObject = New tObject.Create(device, wireframeMesh, parent, RENDERFLAG_WIREFRAME)
+	EndMethod
+	
+	Method renderSolid(context:ID3D11DeviceContext)
+		' everything rendered solid is black
+		Local root:tobject = getRoot()
+		Local game:tgame = tgame(root._extra)
+			
+		' set the colour
+		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
+		context.Map(game._psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+		MemCopy(map.pData, [0.3, 0.3, 0.3, 1.0], 16)
+		context.Unmap(game._psConstants, 0)
+
+		'render(context)
+		' manual 'render(context)'
+		context.Map(_worldbuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+		MemCopy(map.pData, _world, 64)
+		context.Unmap(_worldbuffer, 0)
+		
+		Local strides:Int = 12
+		Local offsets:Int = 0
+		context.IASetVertexBuffers(0, 1, Varptr _vertexBuffer, Varptr strides, Varptr offsets)
+		context.IASetIndexBuffer(_indexBuffer, DXGI_FORMAT_R32_UINT, 0)
+		context.VSSetConstantBuffers(1, 1, Varptr _worldbuffer)
+		context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
+		context.DrawIndexed(_indexCount, 0, 0)
+
+		For Local obj:tobject = EachIn _children
+			obj.renderSolid(context)
+		Next
+	EndMethod
+
+	Method renderWireframe(context:ID3D11DeviceContext)
+		'DebugStop
+		'If _renderflag & RENDERFLAG_WIREFRAME
+		'	Local root:tobject = getRoot()
+		'	Local game:tgame = tgame(root._extra)
+			
+		'	Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
+		'	context.Map(game._psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+		'	MemCopy(map.pData, _colour, 16)
+		'	context.Unmap(game._psConstants, 0)
+			
+		'	render(context)
+		'EndIf
+		'
+		'For Local obj:tobject = EachIn _children
+		'	obj.renderWireframe(context)
+		'Next
+	EndMethod
+EndType
+EndRem
 Type tanimator
 	Method animate(obj:tobject, timeMs:Int) Abstract
 EndType
@@ -1528,7 +1954,7 @@ Type tIntroAnimator Extends tAnimator
 			
 			game._pressToStart.setParent(Null)
 			game._title.setparent(Null)
-			game._currentWave = 1
+			game._currentWave = 4
 			
 			Local begin:tBeginLevelAnimator = New tBeginLevelAnimator
 			begin.init(timeMs)
@@ -1594,8 +2020,7 @@ Type tBeginLevelAnimator Extends tAnimator
 			
 			Local delta:Float = Sqr(distx * distx + disty * disty + distz * distz)
 			If delta < 0.1
-				'core.moveTo(_targetx, _targety, _targetz)
-
+				game._ship.setparent(game._gui)	
 				game._getready.setparent(game._gui)
 				_initTimeMs = timeMs
 				_state = 1
@@ -1624,9 +2049,16 @@ Type tLeaveLevelAnimator Extends tAnimator
 		Local root:tobject = obj.getroot()
 		Local game:tgame = tgame(root._extra)
 
+		If game._alienShip
+			game._alienShip.setParent(Null)
+			game._alienShip._animators.clear()
+			game._alienShip = Null
+		EndIf
+		game._alienShipController.init(timeMs, False)
+		StopChannel(game._channelAlien)
+
 		If _state = 0
-			If timeMs > _initTimeMs + 1500
-				' _planetcore.moveTo(0.0, 5.5, 0.0)
+			If timeMs > _initTimeMs + 1500			
 				Local core:tobject = game._planetcore
 				Local x:Float = core._posx
 				Local y:Float = core._posy
@@ -1776,7 +2208,7 @@ Type tShipAnimator Extends tanimator
 		If KeyDown(KEY_UP)
 			_velx :+ 0.01 * Sin(obj._rotz)
 			_vely :+ 0.01 * Cos(obj._rotz)
-			
+
 			_velx = Max(-0.6, Min(_velx, 0.6))
 			_vely = Max(-0.6, Min(_vely, 0.6))
 		EndIf
@@ -1795,12 +2227,12 @@ Type tShipAnimator Extends tanimator
 		If KeyHit(KEY_SPACE)
 			Local root:tobject = obj.getroot()
 			Local game:tgame = tgame(root._extra)
-			Local upgrade:Int = 1
+			Local upgrade:Int = 0
 
 			Local bullet:tobject = game.getBullet()
 			If Not bullet Return
 			
-			PlaySound(game._soundshot)
+			PlaySound(game._sampleShot)
 
 			Local velx:Float = Sin(obj._rotz)
 			Local vely:Float = Cos(obj._rotz)
@@ -1812,7 +2244,6 @@ Type tShipAnimator Extends tanimator
 					
 			If upgrade = 0
 				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
-				bullet.setCollisionResponder(New tBulletToRockResponder)
 				
 			Else
 				' move the first bullet to the correct position
@@ -1820,7 +2251,6 @@ Type tShipAnimator Extends tanimator
 				vely :- Cos(obj._rotz + 35) * 2
 				
 				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
-				bullet.setCollisionResponder(New tBulletToRockResponder)
 
 				' create another bullet
 				bullet = game.getbullet()
@@ -1839,10 +2269,26 @@ Type tShipAnimator Extends tanimator
 				vely = Cos(obj._rotz) - Cos(obj._rotz - 35) * 2
 				
 				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
-				bullet.setCollisionResponder(New tBulletToRockResponder)
-
 			EndIf				
 		EndIf	
+	EndMethod
+EndType
+
+Type tvelocityAnimator Extends tAnimator
+	Field _velx:Float
+	Field _vely:Float
+	Field _velz:Float
+	
+	Method init(velx:Float, vely:Float, velz:Float)
+		_velx = velx
+		_vely = vely
+		_velz = velz
+	EndMethod
+	
+	Method animate(obj:tObject, timeMs:Int)	
+		obj._posx :+ _velx
+		obj._posy :+ _vely
+		obj._posz :+ _velz
 	EndMethod
 EndType
 
@@ -1977,12 +2423,12 @@ Type tParticleAnimator Extends tAnimator
 	EndMethod
 EndType
 
-Type tCollisionResponder
-	Method collisionWith(collisionData:tCollision) Abstract
+Type tCollisionHandler
+	Method invoke(collisionData:tCollisionData) Abstract
 EndType
 
-Type tBulletToRockResponder Extends tCollisionResponder
-	Method collisionWith(collisionData:tCollision)
+Type tBulletToRockHandler Extends tCollisionHandler
+	Method invoke(collisionData:tCollisionData)
 		Local bullet:tobject = collisionData._src
 		Local rock:tobject = collisionData._dst
 		
@@ -1992,7 +2438,7 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		
 		' if 'game' is null then we're dealing with a double collision because 2 bullets hit the
 		' same rock and it's already been dealt with in here.
-		' should probably deal with this in the collision manager but this is also a good place to deal with it
+		' could probably deal with this in the collision manager but this is also a good place to deal with it
 		If Not game Return
 
 		Local scores:Int[] = [100, 50, 20]
@@ -2017,7 +2463,7 @@ Type tBulletToRockResponder Extends tCollisionResponder
 		Local epicentre:tobject = New tobject
 		epicentre.setparent(game._scene)
 
-		PlaySound(game._rockbreak)
+		PlaySound(game._sampleRocks[size])
 
 		For Local i:Int = 0 Until 16
 			Local particleanim:tParticleAnimator = New tParticleAnimator
@@ -2039,7 +2485,7 @@ Type tBulletToRockResponder Extends tCollisionResponder
 				Local rock:tobjectrock = tobjectrock(game.getRock(size))
 				If rock
 					game._rockstodestroy :+ 1
-					Local vel:Float = (1.0 / rock._size / 1.5) * ((game._currentWave + 1) * 0.1)
+					Local vel:Float = (1.0 / rock._size / 1.5) * ((game._currentWave + 1) * 0.05)
 					Local velx:Float = Rnd(-vel, vel)
 					Local vely:Float = Rnd(-vel, vel)
 					
@@ -2075,23 +2521,155 @@ Type tBulletToRockResponder Extends tCollisionResponder
 	EndMethod
 EndType
 
+Type tShipToRockHandler Extends tCollisionHandler
+	Method invoke(collisionData:tCollisionData)
+		DebugLog "ShipToRock handler"
+	EndMethod
+EndType
+
+Type tShipBulletToAlienHandler Extends tCollisionHandler
+	Method invoke(collisionData:tCollisionData)
+		Local bullet:tobject = collisionData._src
+		Local alien:tobject = collisionData._dst
+	
+		Local root:tobject = bullet.getroot()
+		Local game:tgame = tgame(root._extra)
+		
+		' if 'game' is null then we're dealing with a double collision because 2 bullets hit
+		If Not game Return
+
+		game._score :+ 250
+
+		' remove the bullet
+		bullet._animators.clear()
+		bullet.setParent(Null)
+		game.returnBullet(bullet)
+
+		' remove the alien
+		alien._animators.clear()
+		alien.setparent(Null)
+		game._alienShip = Null
+		game._alienShipController.init(collisionData._timeMs, True)
+		
+		' create an explosion
+		Local posx:Float = alien._posx
+		Local posy:Float = alien._posy
+		Local posz:Float = alien._posz
+
+		Local epicentre:tobject = New tobject
+		epicentre.setparent(game._scene)
+	
+		StopChannel(game._channelAlien)
+		PlaySound(game._sampleRocks[0])
+
+		For Local i:Int = 0 Until 32
+			Local particleanim:tParticleAnimator = New tParticleAnimator
+			particleanim.init(Rnd(-0.25,0.25), Rnd(-0.25,0.25), Rnd(-0.25, 0.25), 0.0, 0.0, 0.0, collisionData._timeMs, 200)
+			
+			Local particle:tobject = game.getParticle()
+			If particle
+				particle.setParent(game._gui)
+				particle.moveTo(posx, posy, posz)
+				particle.addAnimator(particleanim)
+			EndIf
+		Next
+	EndMethod
+EndType
+
+Type tAlienShipControlAnimator Extends tAnimator
+	Field _timeMs:Int
+	Field _dirTimeMs:Int
+	Field _gameActive:Int
+	Field _velAnim:tVelocityAnimator
+
+	Method init(timeMs:Int, gameActive:Int)
+		_timeMs = timeMs
+		_gameActive = gameActive
+	EndMethod
+	
+	Method animate(obj:tObject, timeMs:Int)
+		Local root:tobject = obj.getRoot()
+		Local game:tGame = tGame(root._extra)
+		
+		If _gameActive
+			If timeMs > _timeMs + 10000 - game._currentWave * 1000
+				If Not game._alienShip
+					Local dir:Int = Rand(0,1)
+					If dir = 0 dir = -1
+					_dirTimeMs = timeMs
+					
+					' decide which ship to show
+					'Local ship:Int = Rand(0,1)
+					'If ship
+						game._alienShip = game._alienBig
+					'Else
+					'	game._alienShip = game._alienLittle
+					'EndIf
+
+					game._alienShip.setParent(game._gui)
+					game._alienShip.moveTo(30.0 * dir, Rnd(-18.0, 18.0), 0.0)
+					
+					_velAnim:tVelocityAnimator = New tVelocityAnimator
+					_velanim.init(0.1 * -dir, 0.1 * dir, 0.0)
+					game._alienShip.addAnimator(_velanim)
+
+					Local rotate:tRotationAnimator = New tRotationAnimator
+					rotate.init(0.0, dir, 0.0)
+					game._alienShip.addAnimator(rotate)
+					
+					game._channelAlien = PlaySound(game._sampleAlien[0])
+				EndIf
+			EndIf
+			
+			If game._alienShip
+				If timeMs > _dirTimeMs + 2000
+					_dirTimeMs = timeMs
+					
+					Local velx:Float = _velAnim._velx
+					game._alienShip.removeAnimator(_velAnim)
+					
+					Local dir:Int = Rand(0, 1)
+					If dir = 0 dir = -1
+					
+					_velAnim:tVelocityAnimator = New tVelocityAnimator
+					_velanim.init(velx, 0.1 * dir, 0.0)
+					game._alienShip.addAnimator(_velanim)
+				EndIf
+	
+				If game._alienShip._posy < -18.0 game._alienShip._posy = 18.0
+				If game._alienShip._posy > 18.0 game._alienShip._posy = -18.0
+				If game._alienShip._posx < -30.0 Or game._alienShip._posx > 30.0
+					game._alienShip.setParent(Null)
+					game._alienShip._animators.clear()
+					game._alienShip = Null
+					init(timeMs, True)
+					StopChannel(game._channelAlien)
+				EndIf
+			EndIf
+		EndIf
+	EndMethod
+EndType
+
 Type tCollisionType
 	Field _src:Int
-	Field _dest:Int
+	Field _dst:Int
+	Field _handler:tCollisionHandler
 	
-	Method Create:tCollisionType(src:Int, dest:Int)
+	Method Create:tCollisionType(src:Int, dst:Int, handler:tCollisionHandler)
 		_src = src
-		_dest = dest
+		_dst = dst
+		_handler = handler
+
 		Return Self
 	EndMethod
 EndType
 
-Type tCollision
+Type tCollisionData
 	Field _src:tobject
 	Field _dst:tobject
 	Field _timeMs:Int
 	
-	Method Create:tCollision(src:tObject, dst:tobject, timeMs:Int)
+	Method Create:tCollisionData(src:tObject, dst:tobject, timeMs:Int)
 		_src = src
 		_dst = dst
 		_timeMs = timeMs
@@ -2104,40 +2682,38 @@ Type tCollisionManager Extends tAnimator
 	Field _collisionTypes:tCollisionType[]
 	Field _collisions:TList = New TList
 	
-	Method addCollidableIds(src:Int, dest:Int)
+	Method addCollidableIds(src:Int, dst:Int, handler:tCollisionHandler)
 		Local found:Int
 		For Local colliderType:tCollisionType = EachIn _collisionTypes
-			If colliderType._src = src And colliderType._dest = dest found = True
+			If colliderType._src = src And colliderType._dst = dst found = True
 		Next
 		
 		If Not found
-			_collisionTypes :+ [New tCollisionType.Create(src, dest)]
+			_collisionTypes :+ [New tCollisionType.Create(src, dst, handler)]
 		EndIf
 	EndMethod
 	
 	Method animate(obj:tobject, timeMs:Int)
-		_collisions.clear()
-
 		For Local collisionType:tCollisionType = EachIn _collisionTypes
+			_collisions.clear()
+			
 			For Local src:tObject = EachIn obj._children
 				checkCollisions(src, collisionType, timeMs)
 			Next
-		Next
-
-		For Local collision:tCollision = EachIn _collisions
-			If collision._src._collisionResponder
-				collision._src._collisionResponder.collisionWith(collision)
-			EndIf
+			
+			For Local collision:tCollisionData = EachIn _collisions
+				If collisionType._handler collisionType._handler.invoke(collision)
+			Next
 		Next
 	EndMethod
-	
+
 	Method checkcollisions(obj:tobject, collisionType:tCollisionType, timeMs:Int)
 		For Local src:tObject = EachIn obj._children
 			If src._collisionId <> collisionType._src Continue
-			
+
 			For Local dst:tobject = EachIn obj._children
-				If dst._collisionId <> collisionType._dest Continue
-				
+				If dst._collisionId <> collisionType._dst Continue
+
 				' hmm choose type of collision detection to use? simple spheres at the mo
 				Local srcPosx:Float = src._posx
 				Local srcPosy:Float = src._posy
@@ -2152,12 +2728,12 @@ Type tCollisionManager Extends tAnimator
 				Local dy:Float = dstPosy - srcPosy
 				Local dz:Float = dstPosz - srcPosz
 				
-				Local dist:Float = dx * dx + dy * dy + dz *dz
+				Local dist:Float = dx * dx + dy * dy + dz * dz
 
 				Local radii:Float = (src._collisionRadius + dst._collisionRadius)
 				radii :* radii
 
-				If radii >= dist _collisions.addLast(New tCollision.Create(src, dst, timeMs))
+				If radii >= dist _collisions.addLast(New tCollisionData.Create(src, dst, timeMs))
 			Next
 		Next
 	EndMethod
