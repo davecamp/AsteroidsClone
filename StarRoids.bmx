@@ -253,6 +253,11 @@ Type tMeshData
 
 		Return mesh
 	EndMethod
+	
+	Method galacticBomb:String()
+		Local mesh:String
+		Return mesh
+	EndMethod
 
 	Method bulletWireframe:String()
 		Local mesh:String
@@ -411,7 +416,7 @@ Type tAsteroid
 EndType
 
 Type tAsteroidBelt
-	Method Create:String()
+	Method CreateOuter:String()
 		Local radius:Float = 19
 		Local ringsize:Float = 2
 		
@@ -427,6 +432,20 @@ Type tAsteroidBelt
 			meshdata :+ "v " + posx + " " + posy + " " + posz + "~n"
 		Next
 		
+		meshdata :+ "f"
+		For Local i:Int = 0 Until 360
+			meshdata :+ " " + i
+		Next
+
+		Return meshdata
+	EndMethod
+	
+	Method createInner:String()
+		Local radius:Float = 19
+		Local ringsize:Float = 2
+		
+		Local meshdata:String = "pointlist~n"
+
 		For Local ang:Float = 0.0 Until 360.0 Step 0.2
 			Local random:Float = Rnd(-ringsize * 0.5, ringsize * 0.5)
 			Local randomradius:Float = radius + random
@@ -438,7 +457,7 @@ Type tAsteroidBelt
 		Next
 		
 		meshdata :+ "f"
-		For Local i:Int = 0 Until 1800 + 360
+		For Local i:Int = 0 Until 1800
 			meshdata :+ " " + i
 		Next
 
@@ -894,12 +913,17 @@ Type tGame
 
 	Field _meshdata:tMeshData
 
-	Field _ship:tobject
-	Field _shipupgrade:tobject
-	Field _shippowerup:tobject
+	Field _ship:tobject			' on screen ship
+	Field _shipbasic:tobject
+	Field _shipupgraded:tobject
 	
-	Field _alienShip:tobject ' will be alienBig or alienSmall
+	Field _powerUp:tobject 		' on screen power up
+	Field _shippowerup:tobject
+	Field _galacticBomb:tObject
+	
+	Field _alien:tobject 	' on screen alien
 	Field _alienbig:tobject
+	Field _alienLittle:tObject
 	Field _alienShipController:tAlienShipControlAnimator
 	Field _alienbullet:tobject
 
@@ -913,7 +937,8 @@ Type tGame
 	
 	Field _planetcore:tobject
 	Field _planet:tobject
-	Field _titlebelt:tobject
+	Field _beltInner:tobject
+	Field _beltOuter:tobject
 	
 	Field _score:Int
 	Field _scoreobject:tobject
@@ -929,19 +954,24 @@ Type tGame
 		
 	Field _bulletstore:TList
 	
+	Field _sampleUpgrade:TSound
 	Field _sampleShot:TSound
 	Field _sampleLife:TSound
-	Field _sampleThrust:TSound
+	'Field _sampleThrust:TSound
 	Field _sampleRocks:TSound[3]
 	Field _sampleAlien:TSound[2]	
 	Field _sampleThump:TSound[2]
 	Field _channelAlien:TChannel
+	
+	Field _sampleIntro:TSound
+	Field _channelIntro:TChannel
 	
 	Const COLLISION_ID_SHIP:Int = 1
 	Const COLLISION_ID_BULLET:Int = 2
 	Const COLLISION_ID_ROCK:Int = 3
 	Const COLLISION_ID_ALIEN:Int = 4
 	Const COLLISION_ID_ALIEN_BULLET:Int = 5
+	Const COLLISION_ID_POWERUP:Int = 6
 
 	Method init(Width:Int, Height:Int)
 		_meshdata = New tMeshData
@@ -958,6 +988,11 @@ Type tGame
 		collisionManager.addCollidableIds(COLLISION_ID_SHIP, COLLISION_ID_ROCK, New tShipToRockHandler)
 		collisionManager.addCollidableIds(COLLISION_ID_BULLET, COLLISION_ID_ROCK, New tBulletToRockHandler)
 		collisionManager.addCollidableIds(COLLISION_ID_BULLET, COLLISION_ID_ALIEN, New tShipBulletToAlienHandler)
+		collisionManager.addCollidableIds(COLLISION_ID_ALIEN_BULLET, COLLISION_ID_SHIP, New tAlienBulletToShipHandler)
+		collisionManager.addCollidableIds(COLLISION_ID_ALIEN_BULLET, COLLISION_ID_ROCK, New tAlienBulletToRockHandler)
+		collisionManager.addCollidableIds(COLLISION_ID_ALIEN, COLLISION_ID_ROCK, New tAlienShipToRockHandler)
+		collisionManager.addCollidableIds(COLLISION_ID_SHIP, COLLISION_ID_POWERUP, New tShipPowerUpHandler)
+
 		_root.addAnimator(collisionManager)
 		
 		_alienShipController = New tAlienShipControlAnimator
@@ -987,13 +1022,18 @@ Type tGame
 	
 	Method createGameObjects()
 		' sounds
+		_sampleIntro = LoadSound("sounds/intro.wav", SOUND_LOOP)
+		
+		_sampleUpgrade = LoadSound("sounds/upgrade.wav")
 		_sampleShot = LoadSound("sounds/sfire.wav")
+		_sampleLife = LoadSound("sounds/life.wav")
+		'_sampleThrust = LoadSound("sounds/thrust2.wav")
 		_sampleRocks[0] = LoadSound("sounds/explode3.wav")
 		_sampleRocks[1] = LoadSound("sounds/explode2.wav")
 		_sampleRocks[2] = LoadSound("sounds/explode1.wav")
 		_sampleAlien[0] = LoadSound("sounds/lsaucer.wav", SOUND_LOOP)
 		_sampleAlien[1] = LoadSound("sounds/ssaucer.wav", SOUND_LOOP)
-		_sampleLife = LoadSound("sounds/life.wav")
+
 		
 		' font
 		_font = New tFont
@@ -1002,7 +1042,7 @@ Type tGame
 		_scoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
 		_scoreobject.moveTo(-21, 14, 0)
 		tobjectscore(_scoreobject).setscorepointer(Varptr _score)
-		
+
 		_highscoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
 		_highscoreobject.moveTo(0, 14, 0)
 		tobjectscore(_highscoreobject).setscorepointer(Varptr _highscore)
@@ -1047,28 +1087,37 @@ Type tGame
 		_planet.setname("planet")
 		_planet.moveTo(0.0, 0.0, 0.0)
 		_planet.rotateTo(0.0, 0.0, 0.0)
-		
+
 		Local planetrotation:tRotationAnimator = New tRotationAnimator
 		planetrotation.init(0.0, -0.1, 0.0)
 		_planet.addAnimator(planetrotation)
 		_planet.setcolourWireframe(0.3, 0.3, 0.3, 1.0)
 
-		' logo asteroid belt
-		Local titlebeltmeshdata:String = New tasteroidbelt.Create()
-		Local titlebeltmesh:tmesh = parsemeshdata(titlebeltmeshdata, 1.0)
-		
+		' asteroid belt	
 		Local belt:tobject = New tobject
 		belt.setparent(_planetcore)
 		belt.rotateTo(120.0, 0.0, 0.0)
 		belt.setname("belt")
 		
-		_titlebelt = New tobject.Create(_pipeline._device, titlebeltmesh, belt, RENDERFLAG_WIREFRAME)
-		_titlebelt.setColourWireframe(0.6, 0.6, 0.6, 1.0)
-		_titlebelt.setname("title asteroid belt")
+		Local titlebeltOutermeshdata:String = New tasteroidbelt.CreateOuter()
+		Local titlebeltOutermesh:tmesh = parsemeshdata(titlebeltOutermeshdata, 1.0)
+		_beltOuter = New tobject.Create(_pipeline._device, titlebeltOutermesh, belt, RENDERFLAG_WIREFRAME)
+		_beltOuter.setColourWireframe(0.6, 0.6, 0.6, 1.0)
+		_beltOuter.setname("title asteroid belt outer")
 
-		Local rotation:tRotationAnimator = New tRotationAnimator
-		rotation.init(0.0, 0.0, 0.1)
-		_titlebelt.addAnimator(rotation)
+		Local rotationOuter:tRotationAnimator = New tRotationAnimator
+		rotationOuter.init(0.0, 0.0, 0.1)
+		_beltOuter.addAnimator(rotationOuter)
+		
+		Local titlebeltInnermeshData:String = New tasteroidbelt.CreateInner()
+		Local titlebeltInnermesh:tmesh = parsemeshdata(titlebeltInnermeshdata, 1.0)
+		_beltInner = New tobject.Create(_pipeline._device, titlebeltInnermesh, belt, RENDERFLAG_WIREFRAME)
+		_beltInner.setColourWireframe(0.6, 0.6, 0.6, 1.0)
+		_beltInner.setname("title asteroid belt inner")
+
+		Local rotationInner:tRotationAnimator = New tRotationAnimator
+		rotationInner.init(0.0, 0.0, 0.12)
+		_beltInner.addAnimator(rotationInner)
 
 		' press to start
 		msg = "press space to play"
@@ -1101,46 +1150,57 @@ Type tGame
 
 		' create ship
 		Local shipmesh:tmesh = parsemeshdata(_meshdata.shipWireframe(), 1.0)
-		_ship = New tobject.Create(_pipeline._device, shipmesh, Null, RENDERFLAG_WIREFRAME)
-		_ship.setName("ship")
+		_shipbasic = New tobject.Create(_pipeline._device, shipmesh, Null, RENDERFLAG_WIREFRAME)
+		_shipbasic.setName("ship")
 		Local shipAnimator:tShipAnimator = New tShipAnimator
-		_ship.addAnimator(shipAnimator)
-		_ship.setCollisionId(COLLISION_ID_SHIP)
-		_ship.setCollisionRadius(0.7)
+		_shipbasic.addAnimator(shipAnimator)
+		_shipbasic.setCollisionId(COLLISION_ID_SHIP)
+		_shipbasic.setCollisionRadius(0.7)
 
 		' upgraded ship
 		Local shipupgrademesh:tmesh = parsemeshdata(_meshdata.shipUpgradeWireframe(), 0.2)
-		_shipupgrade = New tobject.Create(_pipeline._device, shipupgrademesh, Null, RENDERFLAG_WIREFRAME)
-		_shipupgrade.setName("upgradedship")
-		_shipupgrade.addAnimator(shipAnimator)
-		_shipupgrade.setCollisionId(COLLISION_ID_SHIP)
-		_shipupgrade.setCollisionRadius(0.8)
+		_shipupgraded = New tobject.Create(_pipeline._device, shipupgrademesh, Null, RENDERFLAG_WIREFRAME)
+		_shipupgraded.setName("upgradedship")
+		_shipupgraded.addAnimator(shipAnimator)
+		_shipupgraded.setCollisionId(COLLISION_ID_SHIP)
+		_shipupgraded.setCollisionRadius(0.8)
 		
 		' powerupship
-		Local powerupshipmeshsolid:tmesh = parsemeshdata(_meshdata.powerupshipsolid(), 0.25)
-		Local powerupshipmeshwireframe:tmesh = parsemeshdata(_meshdata.powerupshipWireframe(), 0.254)
-		_shipPowerUp:tobject = New tobject.Create(_pipeline._device, powerupshipmeshsolid, Null, RENDERFLAG_SOLID)
+		Local powerupshipmeshsolid:tmesh = parsemeshdata(_meshdata.powerupshipsolid(), 0.4)
+		Local powerupshipmeshwireframe:tmesh = parsemeshdata(_meshdata.powerupshipWireframe(), 0.42)
+		_shipPowerUp = New tobject.Create(_pipeline._device, powerupshipmeshsolid, Null, RENDERFLAG_SOLID)
 		Local powerupshipwireframe:tobject = New tobject.Create(_pipeline._device, powerupshipmeshwireframe, _shipPowerUp, RENDERFLAG_WIREFRAME)
-		_shipPowerUp.moveto(0.0, 0.0, -20)
-		'Local powerupShipAnim:tAlienShipAnimator = New tAlienShipAnimator
-		'powerupShipAnim.init(0.00, 0.00, 0.00, 0.0, -1.5, 0.0, 0)
-		'_shipPowerUp.addAnimator(powerupShipAnim)
+		_shipPowerUp.setCollisionId(COLLISION_ID_POWERUP)
+		_shipPowerUp.setCollisionRadius(1.0)
+		_shipPowerUp.setname("powerup-ship")
+		
+		' galactic bomb
+		Local bombmesh:tmesh = parsemeshdata(_meshdata.galacticbomb(), 1.0)
+		_galacticBomb = New tobject.Create(_pipeline._device, bombmesh, _gui, RENDERFLAG_WIREFRAME)
+		_galacticBomb.setCollisionId(COLLISION_ID_POWERUP)
+		_galacticBomb.setCollisionRadius(1.0)
+		_galacticBomb.setName("bomb")
 
 		' alien big ship
-		Local alienbigoutline:tmesh = parseMeshData(_meshdata.alienbigwireframe(), 1.0)
-		alienbigoutline.scale(1.0, 2.0, 1.0)	
-		_alienbig = New tobject.Create(_pipeline._device, alienbigoutline, Null, RENDERFLAG_WIREFRAME)
-		
+		Local alienmesh:tmesh = parseMeshData(_meshdata.alienbigwireframe(), 1.0)
+		alienmesh.scale(1.0, 2.0, 1.0)	
+		_alienbig = New tobject.Create(_pipeline._device, alienmesh, Null, RENDERFLAG_WIREFRAME)
 		_alienbig.setCollisionId(COLLISION_ID_ALIEN)
 		_alienbig.setCollisionRadius(1.0)
 		_alienbig.setname("alienBig")
 
+		' alien little ship
+		alienmesh.scale(0.5, 1.0, 0.5)
+		_alienLittle = New tObject.Create(_pipeline._device, alienmesh, Null, RENDERFLAG_WIREFRAME)
+		_alienLittle.setCollisionId(COLLISION_ID_ALIEN)
+		_alienLittle.setCollisionRadius(0.6)
+		_alienLittle.setname("alienLittle")
+
+		
 		' alien bullet
-		_alienBullet = New tObject.Create(_pipeline._device, parseMeshData(_meshdata.alienbulletWireframe(), 0.2), _gui, RENDERFLAG_WIREFRAME)
-		Local alienBulletAnim:tRotationAnimator = New tRotationAnimator
-		alienBulletAnim.init(-20, 20, -20)
-		_alienBullet.addAnimator(alienBulletAnim)
+		_alienBullet = New tObject.Create(_pipeline._device, parseMeshData(_meshdata.alienbulletWireframe(), 0.2), Null, RENDERFLAG_WIREFRAME)
 		_alienBullet.setCollisionRadius(0.2)
+		_alienBullet.setCollisionId(COLLISION_ID_ALIEN_BULLET)
 		
 		' create bullets
 		Local bulletMesh:tMesh = parsemeshdata(_meshdata.bulletWireframe(), 1.0)
@@ -1169,6 +1229,7 @@ Type tGame
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8)
+			rock.setColourSolid(0.1, 0.1, 0.1, 1.0)
 			
 			tobjectrock(rock).setSize(3)			
 			_rockstore.addLast(rock)
@@ -1180,6 +1241,7 @@ Type tGame
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8 * 0.6)
+			rock.setColourSolid(0.1, 0.1, 0.1, 1.0)
 			
 			tobjectrock(rock).setSize(2)
 			_rockstore.addLast(rock)
@@ -1191,6 +1253,7 @@ Type tGame
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8 * 0.3)
+			rock.setColourSolid(0.1, 0.1, 0.1, 1.0)
 			
 			tobjectrock(rock).setSize(1)
 			_rockstore.addLast(rock)
@@ -1206,27 +1269,6 @@ Type tGame
 			EndIf
 		Next
 	EndMethod
-	
-	Method getBullet:tobject()
-		Return tobject(_bulletstore.removefirst())
-	EndMethod
-	
-	Method getParticle:tobject()
-		Return tobject(_particlestore.removefirst())
-	EndMethod
-	
-	Method returnBullet(bullet:tobject)
-		_bulletstore.addlast(bullet)
-	EndMethod
-	
-	Method returnRock(rock:tobject)
-		_rockstore.addlast(rock)
-	EndMethod
-	
-	Method returnParticle(rock:tobject)
-		_particlestore.addlast(rock)
-	EndMethod
-
 
 	Method parsemeshdata:tmesh(data:String, scale:Float)
 		Local lines:String[] = data.split("~n")
@@ -1554,6 +1596,71 @@ Type tGame
 		_pipeline.turnOffDepthTesting()
 		rendersolids(_gui)
 		renderwireframes(_gui)
+	EndMethod
+	
+	' a central method to break the rock, the ship bullet, alien bullet and the alien can break rocks
+	Method destroyRock(rock:tobjectrock, timeMs:Int)
+		' remove the rock
+		rock._animators.clear()
+		rock.setparent(Null)
+		_rockstore.addlast(rock)
+		_rocksToDestroy :- 1
+		
+		' create an explosion
+		Local posx:Float = rock._posx
+		Local posy:Float = rock._posy
+		Local posz:Float = rock._posz
+
+		Local epicentre:tobject = New tobject
+		epicentre.setparent(_gui)
+
+		PlaySound(_sampleRocks[rock._size - 1])
+
+		For Local i:Int = 0 Until 16
+			Local particleanim:tParticleAnimator = New tParticleAnimator
+			particleanim.init(Rnd(-0.5,0.5), Rnd(-0.5,0.5), Rnd(-0.5, 0.5), 0.0, 0.0, 0.0, timeMs, 200 + rock._size * 100)
+			
+			Local particle:tobject = tobject(_particlestore.removefirst())
+			If particle
+				particle.setParent(epicentre)
+				particle.moveTo(posx, posy, posz)
+				particle.addAnimator(particleanim)
+			EndIf
+		Next
+			
+		' split the rock into 2
+		Local size:Int = rock._size - 1
+		If size <> 0
+			Local newRockCount:Int = 2 ' Rand(2, 3)
+			
+			For Local i:Int = 0 Until newRockCount
+				Local newrock:tobjectrock = tobjectrock(getRock(size))
+				If newrock
+					_rockstodestroy :+ 1
+					Local vel:Float = (1.0 / size / 1.5) * ((_currentWave + 1) * 0.05)
+					Local velx:Float = Rnd(-vel, vel)
+					Local vely:Float = Rnd(-vel, vel)
+					
+					' make sure that the rock is always moving
+					If velx > -0.01 And velx <= 0.0 velx = -0.01
+					If vely > -0.01 And velx <= 0.0 vely = -0.01
+					If velx < 0.01 And velx >= 0.0 velx = 0.01
+					If vely < 0.01 And vely >= 0.0 vely = 0.01
+					
+					' but don't let it move too fast
+					velx = Min(Max(-0.35,velx), 0.35)
+					vely = Min(Max(-0.35,vely), 0.35)
+					
+					newrock.moveTo(posx, posy, posz)
+					newrock.setparent(_gui)
+						
+					' smaller rocks will move faster
+					Local rockanim:tRockAnimator = New tRockAnimator
+					rockanim.init(velx, vely, 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
+					newrock.addAnimator(rockanim)
+				EndIf
+			Next
+		EndIf
 	EndMethod
 
 	Method shutdown()
@@ -1945,16 +2052,25 @@ EndType
 
 Type tIntroAnimator Extends tAnimator
 	Method animate(obj:tobject, timeMs:Int)
+		Local root:tobject = obj.getroot()
+		If Not root Return
+		
+		Local game:tGame = tGame(root._extra)
+		If Not game._channelIntro game._channelIntro = PlaySound(game._sampleIntro)
+		
+		
 		If KeyDown(KEY_SPACE)
 			FlushKeys()
-			
-			Local root:tobject = obj.getroot()
-			Local game:tGame = tGame(root._extra)
+					
 			game._gamestate = 1
 			
 			game._pressToStart.setParent(Null)
 			game._title.setparent(Null)
-			game._currentWave = 4
+			game._currentWave = 1
+			
+			game._ship = game._shipbasic
+			game._powerup = Null
+			game._alien = Null
 			
 			Local begin:tBeginLevelAnimator = New tBeginLevelAnimator
 			begin.init(timeMs)
@@ -2049,13 +2165,19 @@ Type tLeaveLevelAnimator Extends tAnimator
 		Local root:tobject = obj.getroot()
 		Local game:tgame = tgame(root._extra)
 
-		If game._alienShip
-			game._alienShip.setParent(Null)
-			game._alienShip._animators.clear()
-			game._alienShip = Null
+		If game._alien
+			game._alien.setParent(Null)
+			game._alien._animators.clear()
+			game._alien = Null
 		EndIf
 		game._alienShipController.init(timeMs, False)
-		StopChannel(game._channelAlien)
+		If game._channelAlien StopChannel(game._channelAlien)
+
+		If game._powerUp
+			game._powerUp._animators.clear()
+			game._powerUp.setParent(Null)
+			game._powerUp = Null
+		EndIf
 
 		If _state = 0
 			If timeMs > _initTimeMs + 1500			
@@ -2200,17 +2322,24 @@ Type tShipAnimator Extends tanimator
 	Field _velz:Float
 	
 	Method animate(obj:tObject, timeMs:Int)
+		Local root:tobject = obj.getroot()
+		If Not root Return
+
+		Local game:tgame = tgame(root._extra)
+			
 		Local st:Float = 5
 		If KeyDown(KEY_LEFT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz - st)
 		If KeyDown(KEY_RIGHT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz + st)
 			
-		' adjust  some thrust
+		' adjust some thrust
 		If KeyDown(KEY_UP)
 			_velx :+ 0.01 * Sin(obj._rotz)
 			_vely :+ 0.01 * Cos(obj._rotz)
 
 			_velx = Max(-0.6, Min(_velx, 0.6))
 			_vely = Max(-0.6, Min(_vely, 0.6))
+			
+			'PlaySound(game._sampleThrust)
 		EndIf
 		
 		Local posx:Float = obj._posx
@@ -2225,11 +2354,7 @@ Type tShipAnimator Extends tanimator
 		obj.moveTo(posx, posy, posz)
 
 		If KeyHit(KEY_SPACE)
-			Local root:tobject = obj.getroot()
-			Local game:tgame = tgame(root._extra)
-			Local upgrade:Int = 0
-
-			Local bullet:tobject = game.getBullet()
+			Local bullet:tobject = tobject(game._bulletstore.removefirst())
 			If Not bullet Return
 			
 			PlaySound(game._sampleShot)
@@ -2241,33 +2366,42 @@ Type tShipAnimator Extends tanimator
 		
 			bullet.addAnimator(animator)
 			bullet.setParent(game._gui)
-					
-			If upgrade = 0
-				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
+			bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
 				
-			Else
-				' move the first bullet to the correct position
-				velx :- Sin(obj._rotz + 35) * 2
-				vely :- Cos(obj._rotz + 35) * 2
+			If game._ship = game._shipUpgraded
+				' create another bullet
+				bullet = tobject(game._bulletstore.removefirst())
+				If Not bullet Return
+
+				velx = Sin(obj._rotz - 10)
+				vely = Cos(obj._rotz - 10)
+			
+				animator = New tBulletAnimator
+				animator.init(velx, vely, 0.0, 500, timeMs)
 				
+				' move the bullet to the correct position
+				velx :- Sin(obj._rotz + 25) * 2
+				vely :- Cos(obj._rotz + 25) * 2
+
+				bullet.addAnimator(animator)
+				bullet.setParent(game._gui)
 				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
 
 				' create another bullet
-				bullet = game.getbullet()
+				bullet = tobject(game._bulletstore.removefirst())
 				If Not bullet Return
 				
-				velx = Sin(obj._rotz)
-				vely = Cos(obj._rotz)
+				velx = Sin(obj._rotz + 10)
+				vely = Cos(obj._rotz + 10)
 				
 				animator = New tBulletAnimator
 				animator.init(velx, vely, 0.0, 500, timeMs)
 				
+				velx = Sin(obj._rotz) - Sin(obj._rotz - 25) * 2
+				vely = Cos(obj._rotz) - Cos(obj._rotz - 25) * 2
+				
 				bullet.addAnimator(animator)
 				bullet.setParent(game._gui)
-				
-				velx = Sin(obj._rotz) - Sin(obj._rotz - 35) * 2
-				vely = Cos(obj._rotz) - Cos(obj._rotz - 35) * 2
-				
 				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
 			EndIf				
 		EndIf	
@@ -2325,11 +2459,48 @@ Type tbulletAnimator Extends tanimator
 			
 			obj._animators.clear()
 			obj.setParent(Null)
-			game.returnBullet(obj)
+			game._bulletstore.addlast(obj)
 		EndIf
 	EndMethod
 EndType
 
+Type tAlienBulletAnimator Extends tanimator
+	Field _velx:Float
+	Field _vely:Float
+	Field _velz:Float
+	Field _lifeTimeMs:Int
+	Field _spawnTimeMs:Int
+
+	Method init(velx:Float, vely:Float, velz:Float, lifeTimeMs:Int, spawnTimeMs:Int)
+		_velx = velx
+		_vely = vely
+		_velz = velz
+		_lifeTimeMs = lifeTimeMs
+		_spawnTimeMs = spawnTimeMs
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		Local posx:Float = obj._posx
+		Local posy:Float = obj._posy
+		Local posz:Float = obj._posz
+		posx :+ _velx; posy :+ _vely; posz :+ _velz
+		
+		If posy < -18.0 posy = 18.0
+		If posy > 18 posy = -18.0
+		If posx < -29.5 posx = 29.5
+		If posx > 29.5 posx = -29.5
+		obj.moveTo(posx, posy, posz)
+			
+		If timeMs > _spawnTimeMs + _lifeTimeMs
+			Local root:tobject = obj.getroot()
+			Local game:tgame = tgame(root._extra)
+			
+			obj._animators.clear()
+			obj.setParent(Null)
+			game._alienBullet = obj
+		EndIf
+	EndMethod
+EndType
 Type tRotationAnimator Extends tAnimator
 	Field _rotx:Float
 	Field _roty:Float
@@ -2418,7 +2589,120 @@ Type tParticleAnimator Extends tAnimator
 			
 			obj._animators.clear()
 			obj.setParent(Null)
-			game.returnParticle(obj)
+			game._particleStore.addLast(obj)
+		EndIf
+	EndMethod
+EndType
+
+Type tAlienShipControlAnimator Extends tAnimator
+	Field _timeMs:Int
+	Field _dirTimeMs:Int
+	Field _gameActive:Int
+	Field _velAnim:tVelocityAnimator
+
+	Method init(timeMs:Int, gameActive:Int)
+		_timeMs = timeMs
+		_gameActive = gameActive
+	EndMethod
+	
+	Method animate(obj:tObject, timeMs:Int)
+		Local root:tobject = obj.getRoot()
+		Local game:tGame = tGame(root._extra)
+
+		If _gameActive
+			If timeMs > _timeMs + 12000 - game._currentWave * 1000
+				' game._alienShip becomes 'NON null' when the alien is active
+				If Not game._alien
+					' decide which ship to show - show the big one unless...
+					game._alien = game._alienBig
+					If game._currentWave >= 3 And Rand(0,1) = 0
+						game._alien = game._alienLittle
+					EndIf
+					
+					Local alien:tobject = game._alien
+					
+					' which direction - left or right?
+					Local dir:Int = Rand(0,1)
+					If dir = 0 dir = -1
+					_dirTimeMs = timeMs
+
+					' position ship at the left or right edge
+					alien.setParent(game._gui)
+					alien.moveTo(30.0 * dir, Rnd(-18.0, 18.0), 0.0)
+					
+					' make sure to move into the game play area
+					_velAnim:tVelocityAnimator = New tVelocityAnimator
+					_velanim.init(0.1 * -dir, 0.1 * dir, 0.0)
+					alien.addAnimator(_velanim)
+
+					' make it spin
+					Local rotate:tRotationAnimator = New tRotationAnimator
+					rotate.init(0.0, dir, 0.0)
+					alien.addAnimator(rotate)
+					
+					' earplugs in!
+					Local sampleIndexToPlay:Int
+					If alien = game._AlienBig
+						sampleIndexToPlay = 0
+					Else
+						sampleIndexToPlay = 1
+					EndIf
+					game._channelAlien = PlaySound(game._sampleAlien[sampleIndexToPlay])
+				EndIf
+			EndIf
+			
+			If game._alien
+				' if the bullet is available then shoot
+				If game._alienbullet
+					Local bullet:tobject = game._alienbullet
+					game._alienbullet = Null
+								
+					bullet.setparent(game._gui)
+					bullet.moveTo(game._alien._posx, game._alien._posy, game._alien._posz)
+					
+					Local rot:tRotationAnimator = New tRotationAnimator
+					rot.init(-20, 20, -20)
+					bullet.addAnimator(rot)
+					
+					' get a varied vector to the player
+					Local accuracy:Float = 20.0 / game._currentWave
+					Local dirx:Float = game._ship._posx + Rnd(-accuracy, accuracy) - game._alien._posx
+					Local diry:Float = game._ship._posy + Rnd(-accuracy, accuracy) - game._alien._posy
+					
+					' normalize for consistant speed in all directions
+					Local delta:Float = Sqr(dirx * dirx + diry * diry)
+					dirx = (dirx / delta) * 0.5
+					diry = (diry / delta) * 0.5
+					
+					' apply
+					Local anim:tAlienBulletAnimator = New tAlienBulletAnimator
+					anim.init(dirx, diry, 0.0, timeMs, 850)
+					bullet.addAnimator(anim)
+				EndIf
+				
+				' after 2 seconds change direction
+				If timeMs > _dirTimeMs + 2000
+					_dirTimeMs = timeMs
+					
+					Local velx:Float = _velAnim._velx
+					game._alien.removeAnimator(_velAnim)
+					
+					Local diry:Int = Rand(-1, 1)
+					_velAnim:tVelocityAnimator = New tVelocityAnimator
+					_velanim.init(velx, 0.1 * diry, 0.0)
+					game._alien.addAnimator(_velanim)
+				EndIf
+	
+				If game._alien._posy < -18.0 game._alien._posy = 18.0
+				If game._alien._posy > 18.0 game._alien._posy = -18.0
+				If game._alien._posx < -30.0 Or game._alien._posx > 30.0
+					game._alien.setParent(Null)
+					game._alien._animators.clear()
+					game._alien = Null
+					init(timeMs, True)
+					StopChannel(game._channelAlien)
+				EndIf
+			EndIf
 		EndIf
 	EndMethod
 EndType
@@ -2447,70 +2731,10 @@ Type tBulletToRockHandler Extends tCollisionHandler
 		' remove the bullet
 		bullet._animators.clear()
 		bullet.setParent(Null)
-		game.returnBullet(bullet)
+		game._bulletstore.addlast(bullet)
 
-		' remove the rock
-		rock._animators.clear()
-		rock.setparent(Null)
-		game.returnRock(rock)
-		game._rocksToDestroy :- 1
-		
-		' create an explosion
-		Local posx:Float = rock._posx
-		Local posy:Float = rock._posy
-		Local posz:Float = rock._posz
-
-		Local epicentre:tobject = New tobject
-		epicentre.setparent(game._scene)
-
-		PlaySound(game._sampleRocks[size])
-
-		For Local i:Int = 0 Until 16
-			Local particleanim:tParticleAnimator = New tParticleAnimator
-			particleanim.init(Rnd(-0.5,0.5), Rnd(-0.5,0.5), Rnd(-0.5, 0.5), 0.0, 0.0, 0.0, collisionData._timeMs, 200 + tobjectrock(rock)._size * 100)
-			
-			Local particle:tobject = game.getParticle()
-			If particle
-				particle.setParent(game._gui)
-				particle.moveTo(posx, posy, posz)
-				particle.addAnimator(particleanim)
-			EndIf
-		Next
-			
-		' split the rock into 2
-		If size <> 0
-			Local newRockCount:Int = 2 ' Rand(2, 3)
-			
-			For Local i:Int = 0 Until newRockCount
-				Local rock:tobjectrock = tobjectrock(game.getRock(size))
-				If rock
-					game._rockstodestroy :+ 1
-					Local vel:Float = (1.0 / rock._size / 1.5) * ((game._currentWave + 1) * 0.05)
-					Local velx:Float = Rnd(-vel, vel)
-					Local vely:Float = Rnd(-vel, vel)
-					
-					' make sure that the rock is always moving
-					If velx > -0.01 And velx <= 0.0 velx = -0.01
-					If vely > -0.01 And velx <= 0.0 vely = -0.01
-					If velx < 0.01 And velx >= 0.0 velx = 0.01
-					If vely < 0.01 And vely >= 0.0 vely = 0.01
-					
-					' but don't let it move too fast
-					velx = Min(Max(-0.35,velx), 0.35)
-					vely = Min(Max(-0.35,vely), 0.35)
-					
-					If rock
-						rock.moveTo(posx, posy, posz)
-						rock.setparent(game._gui)
-						
-						' smaller rocks will move faster
-						Local rockanim:tRockAnimator = New tRockAnimator
-						rockanim.init(velx, vely, 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
-						rock.addAnimator(rockanim)
-					EndIf
-				EndIf
-			Next
-		EndIf
+		' call this method as the alien ship also breaks the rocks - don't want to duplicate too much code
+		game.destroyRock(tobjectRock(rock), collisionData._timeMs)
 
 		' wave complete?
 		If game._rocksTodestroy = 0
@@ -2543,13 +2767,29 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 		' remove the bullet
 		bullet._animators.clear()
 		bullet.setParent(Null)
-		game.returnBullet(bullet)
+		game._bulletstore.addlast(bullet)
 
 		' remove the alien
 		alien._animators.clear()
 		alien.setparent(Null)
-		game._alienShip = Null
+		game._alien = Null
 		game._alienShipController.init(collisionData._timeMs, True)
+		
+		' if the little alien was shot then drop the upgrade ship or a neutron bomb :)
+		If alien = game._alienlittle
+			If Not game._powerUp
+				If game._ship = game._shipbasic
+					Local powerup:tobject = game._shipPowerUp
+					powerUp.setParent(game._gui)
+					powerUp.moveTo(alien._posx, alien._posy, alien._posz)
+					Local anim:tRotationAnimator = New tRotationAnimator
+					anim.init(0.0, -1.0, 0.0)
+					powerUp.addAnimator(anim)
+				
+					game._powerUp = powerup
+				EndIf
+			EndIf
+		EndIf
 		
 		' create an explosion
 		Local posx:Float = alien._posx
@@ -2566,7 +2806,7 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 			Local particleanim:tParticleAnimator = New tParticleAnimator
 			particleanim.init(Rnd(-0.25,0.25), Rnd(-0.25,0.25), Rnd(-0.25, 0.25), 0.0, 0.0, 0.0, collisionData._timeMs, 200)
 			
-			Local particle:tobject = game.getParticle()
+			Local particle:tobject = tobject(game._particlestore.removefirst())
 			If particle
 				particle.setParent(game._gui)
 				particle.moveTo(posx, posy, posz)
@@ -2576,77 +2816,86 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 	EndMethod
 EndType
 
-Type tAlienShipControlAnimator Extends tAnimator
-	Field _timeMs:Int
-	Field _dirTimeMs:Int
-	Field _gameActive:Int
-	Field _velAnim:tVelocityAnimator
-
-	Method init(timeMs:Int, gameActive:Int)
-		_timeMs = timeMs
-		_gameActive = gameActive
+Type tAlienBulletToShipHandler Extends tCollisionHandler
+	Method invoke(collisionData:tCollisionData)
+		DebugLog "tAlienBulletToShipHandler"
 	EndMethod
-	
-	Method animate(obj:tObject, timeMs:Int)
-		Local root:tobject = obj.getRoot()
-		Local game:tGame = tGame(root._extra)
+EndType
+
+Type tAlienBulletToRockHandler Extends tCollisionHandler
+	Method invoke(collisionData:tCollisionData)
+		Local rock:tobjectrock = tobjectRock(collisionData._dst)
+		Local root:tObject = rock.getRoot()
+		If Not root Return
 		
-		If _gameActive
-			If timeMs > _timeMs + 10000 - game._currentWave * 1000
-				If Not game._alienShip
-					Local dir:Int = Rand(0,1)
-					If dir = 0 dir = -1
-					_dirTimeMs = timeMs
-					
-					' decide which ship to show
-					'Local ship:Int = Rand(0,1)
-					'If ship
-						game._alienShip = game._alienBig
-					'Else
-					'	game._alienShip = game._alienLittle
-					'EndIf
-
-					game._alienShip.setParent(game._gui)
-					game._alienShip.moveTo(30.0 * dir, Rnd(-18.0, 18.0), 0.0)
-					
-					_velAnim:tVelocityAnimator = New tVelocityAnimator
-					_velanim.init(0.1 * -dir, 0.1 * dir, 0.0)
-					game._alienShip.addAnimator(_velanim)
-
-					Local rotate:tRotationAnimator = New tRotationAnimator
-					rotate.init(0.0, dir, 0.0)
-					game._alienShip.addAnimator(rotate)
-					
-					game._channelAlien = PlaySound(game._sampleAlien[0])
-				EndIf
-			EndIf
-			
-			If game._alienShip
-				If timeMs > _dirTimeMs + 2000
-					_dirTimeMs = timeMs
-					
-					Local velx:Float = _velAnim._velx
-					game._alienShip.removeAnimator(_velAnim)
-					
-					Local dir:Int = Rand(0, 1)
-					If dir = 0 dir = -1
-					
-					_velAnim:tVelocityAnimator = New tVelocityAnimator
-					_velanim.init(velx, 0.1 * dir, 0.0)
-					game._alienShip.addAnimator(_velanim)
-				EndIf
-	
-				If game._alienShip._posy < -18.0 game._alienShip._posy = 18.0
-				If game._alienShip._posy > 18.0 game._alienShip._posy = -18.0
-				If game._alienShip._posx < -30.0 Or game._alienShip._posx > 30.0
-					game._alienShip.setParent(Null)
-					game._alienShip._animators.clear()
-					game._alienShip = Null
-					init(timeMs, True)
-					StopChannel(game._channelAlien)
-				EndIf
-			EndIf
+		Local game:tgame = tgame(root._extra)
+		game.destroyRock(rock, collisionData._timeMs)
+		
+		' alien could have shot the last rock?
+		If game._rocksTodestroy = 0
+			Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
+			leaveLevel.init(collisionData._timeMs)
+			game._gui.addanimator(leaveLevel)
 		EndIf
+
+		Local bullet:tobject = collisionData._src
+		game._alienBullet = bullet
+	EndMethod
+EndType
+
+Type tAlienShipToRockHandler Extends tCollisionHandler
+	Method invoke(collisionData:tCollisionData)
+		'Local alien:tobject = collisionData._src
+		'Local rock:tobjectrock = tobjectrock(collisionData._dst)
+
+		'Local root:tobject = alien.getRoot()
+		'If Not root Return
+		
+		'Local game:tgame = tgame(root._extra)
+		'game.destroyRock(rock, collisionData._timeMs)
+		
+		' alien could have shot the last rock?
+		'If game._rocksTodestroy = 0
+		'	Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
+		'	leaveLevel.init(collisionData._timeMs)
+		'	game._gui.addanimator(leaveLevel)
+		'Else
+			' reset the time for alien to appear
+		'	For Local anim:tanimator = EachIn root._animators
+		'		If tAlienShipControlAnimator(anim)
+		'			tAlienShipControlAnimator(anim).init(collisionData._timeMs, True)
+		'		EndIf
+		'	Next
+		'EndIf
+	EndMethod
+EndType
+
+Type tShipPowerUpHandler Extends tCollisionHandler
+	Method invoke(collisionData:tCollisionData)
+		Local ship:tobject = collisionData._src
+		Local powerup:tobject = collisionData._dst
+		
+		Local root:tobject = ship.getRoot()
+		If Not root Return
+		
+		Local game:tgame = tgame(root._extra)
+		If powerup = game._shipPowerup
+			' copy over attributes
+			game._shipupgraded.moveTo(game._ship._posx, game._ship._posy, game._ship._posz)
+			game._shipupgraded.rotateTo(game._ship._rotx, game._ship._roty, game._ship._rotz)
+			game._shipupgraded.setParent(game._ship._parent)
+			
+			' remove old ship from gameplay
+			game._ship.setParent(Null)
+			game._ship = game._shipupgraded
+		EndIf
+		
+		PlaySound(game._sampleUpgrade)
+		
+		' remove the powerup
+		powerup._animators.clear()
+		powerup.setparent(Null)
+		game._powerup = Null
 	EndMethod
 EndType
 
