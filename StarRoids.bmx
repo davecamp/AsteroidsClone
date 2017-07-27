@@ -29,7 +29,22 @@ Type tMeshData
 		Return mesh
 	EndMethod
 	
-	Method shipUpgradeWireframe:String()
+	Method shipSolid:String()
+		Local mesh:String
+		mesh :+ "trianglelist~n"
+		mesh :+ "v -0.5 -0.8 0.0~n"
+		mesh :+ "v 0.0 0.8 0.0~n"
+		mesh :+ "v 0.5 -0.8 0.0~n"
+		mesh :+ "v 0.25 -0.5 0.0~n"
+		mesh :+ "v -0.25 -0.5 0.0~n"
+		mesh :+ "v 0.0 0.2 0.0~n"
+		mesh :+ "v 0.0 -0.3 0.0~n"
+		mesh :+ "f 0 1 4 4 1 3 3 1 2"
+		
+		Return mesh
+	EndMethod
+	
+	Method shipUpgradedWireframe:String()
 		Local mesh:String
 		mesh :+ "linelist~n"
 		mesh :+ "v -2.0 -4 0.0~n"
@@ -56,11 +71,48 @@ Type tMeshData
 		mesh :+ "f 0 4 4 5 5 6~n"
 		mesh :+ "f 3 7 7 8 8 9~n"
 		mesh :+ "f 1 10 10 11 11 2~n"
+		
 		mesh :+ "f 12 13 13 14 14 15~n"
 		mesh :+ "f 16 17 17 18 18 19~n"
 		
 		Return mesh
 	EndMethod
+	
+	Method shipUpgradedSolid:String()
+		Local mesh:String
+		mesh :+ "trianglelist~n"
+		mesh :+ "v -2.0 -4 0.0~n"
+		mesh :+ "v -2.0 1.0 0.0~n"
+		mesh :+ "v 2.0 1.0 0.0~n"
+		mesh :+ "v 2.0 -4 0.0~n"
+		
+		mesh :+ "v -6.0 -3.0 0.0~n"
+		mesh :+ "v -6.0 -1.0 0.0~n"
+		
+		mesh :+ "v -2.0 0.0 0.0~n"
+		mesh :+ "v 6.0 -3.0 0.0~n"
+		mesh :+ "v 6.0 -1.0 0.0~n"
+		mesh :+ "v 2.0 0.0 0.0~n"
+		mesh :+ "v -1.0 5.0 0.0~n"
+		mesh :+ "v 1.0 5.0 0.0~n"
+		mesh :+ "v -1.25 4.0 0.0~n"
+		mesh :+ "v -2.9 3.25 0.0~n"
+		mesh :+ "v -2.9 2.25 0.0~n"
+		mesh :+ "v -1.75 2.0 0.0~n"
+		mesh :+ "v 1.25 4.0 0.0~n"
+		mesh :+ "v 2.9 3.25 0.0~n"
+		mesh :+ "v 2.9 2.25 0.0~n"
+		mesh :+ "v 1.75 2.0 0.0~n"
+		mesh :+ "f 0 1 2 0 2 3~n"
+		mesh :+ "f 4 5 6 4 6 0~n"
+		mesh :+ "f 3 9 7 7 9 8~n"
+		mesh :+ "f 1 10 2 2 10 11~n"
+		mesh :+ "f 14 13 12 14 12 15~n"
+		mesh :+ "f 19 16 17 19 17 18"
+		
+		Return mesh
+	EndMethod
+
 
 	Method powerupShipSolid:String()
 		Local mesh:String
@@ -78,6 +130,8 @@ Type tMeshData
 		mesh :+ "f 3 2 6 3 6 7~n"
 		mesh :+ "f 4 5 1 4 1 0~n"
 		mesh :+ "f 7 6 5 7 5 4~n"
+		mesh :+ "f 4 0 3 4 3 7~n"
+		mesh :+ "f 1 5 2 2 5 6~n"
 
 		Return mesh
 	EndMethod
@@ -352,16 +406,6 @@ Type tMeshData
 		
 		'mesh :+ "f 32 33 33 34"
 		
-		Return mesh
-	EndMethod
-	
-	Method alienSmallWireframe:String()
-		Local mesh:String
-		Return mesh
-	EndMethod
-	
-	Method alienSmallSolid:String()
-		Local mesh:String
 		Return mesh
 	EndMethod
 EndType
@@ -909,14 +953,18 @@ Type tGame
 	
 	Field _root:tobject
 	Field _scene:tobject
-	Field _gui:tobject
 
 	Field _meshdata:tMeshData
 
 	Field _ship:tobject			' on screen ship
 	Field _shipbasic:tobject
-	Field _shipupgraded:tobject
+	Field _shipbasicwire:tobject
+	Field _shipbasicsolid:tobject
 	
+	Field _shipupgraded:tobject
+	Field _shipupgradedwire:tobject
+	Field _shipupgradedsolid:tobject
+
 	Field _powerUp:tobject 		' on screen power up
 	Field _shippowerup:tobject
 	Field _galacticBomb:tObject
@@ -1003,11 +1051,6 @@ Type tGame
 		_scene.setparent(_root)
 		_scene.setname("scene")
 
-		' setup the gui object
-		_gui = New tObject
-		_gui.setParent(_root)
-		_gui.setname("gui")
-
 		_window = New TWindow.Create(Width, Height)
 		_pipeline = New TGpuD3D11.Create(Width, Height, _window.getWindowHandle())
 	
@@ -1039,19 +1082,19 @@ Type tGame
 		_font = New tFont
 		
 		' score
-		_scoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
-		_scoreobject.moveTo(-21, 14, 0)
+		_scoreobject = New tobjectscore.Create(_pipeline._device, Null, _scene, RENDERFLAG_WIREFRAME)
+		_scoreobject.moveTo(-21, 13, -5)
 		tobjectscore(_scoreobject).setscorepointer(Varptr _score)
 
-		_highscoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
-		_highscoreobject.moveTo(0, 14, 0)
+		_highscoreobject = New tobjectscore.Create(_pipeline._device, Null, _scene, RENDERFLAG_WIREFRAME)
+		_highscoreobject.moveTo(0, 13, -5)
 		tobjectscore(_highscoreobject).setscorepointer(Varptr _highscore)
 		
 		' title
 		Local msg:String = "StarRoids"
 		_title = New tobject
-		_title.setparent(_gui)
-		_title.moveTo(0, 7, 0)
+		_title.setparent(_scene)
+		_title.moveTo(0, 7, -5)
 		_title.setname("title")
 
 		Local titleMesh:tmesh = _font.createsentence(msg)
@@ -1072,37 +1115,34 @@ Type tGame
 		Local wavecompletemesh:tmesh = _font.createsentence(msg)
 		_wavecomplete = New tobject.Create(_pipeline._device, wavecompletemesh, Null, RENDERFLAG_WIREFRAME)
 		_wavecomplete.moveTo(-6.5, 0.0, -60.0)
-		
+
 		' planet core
 		_planetcore:tobject = New tobject
 		_planetcore.setparent(_scene)
-		_planetcore.rotateTo(0.0, 0.0, 0.0)
-		_planetcore.moveTo(0.0, 5.5, 0.0)
+		_planetcore.moveTo(0.0, 10.0, 160.0)
 		_planetcore.setname("planet core")
 
 		' planet
 		Local planetdata:String = New tasteroid.Create()
-		Local planetmesh:tmesh = parsemeshdata(planetdata, 4)
+		Local planetmesh:tmesh = parsemeshdata(planetdata, 16)
 		_planet = New tobject.Create(_pipeline._device, planetmesh, _planetcore, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 		_planet.setname("planet")
-		_planet.moveTo(0.0, 0.0, 0.0)
-		_planet.rotateTo(0.0, 0.0, 0.0)
 
 		Local planetrotation:tRotationAnimator = New tRotationAnimator
 		planetrotation.init(0.0, -0.1, 0.0)
 		_planet.addAnimator(planetrotation)
-		_planet.setcolourWireframe(0.3, 0.3, 0.3, 1.0)
+		_planet.setcolourWireframe(0.8, 0.2, 0.1, 1.0)
 
 		' asteroid belt	
 		Local belt:tobject = New tobject
 		belt.setparent(_planetcore)
-		belt.rotateTo(120.0, 0.0, 0.0)
+		belt.rotateTo(118.0, 0.0, 0.0)
 		belt.setname("belt")
 		
 		Local titlebeltOutermeshdata:String = New tasteroidbelt.CreateOuter()
-		Local titlebeltOutermesh:tmesh = parsemeshdata(titlebeltOutermeshdata, 1.0)
+		Local titlebeltOutermesh:tmesh = parsemeshdata(titlebeltOutermeshdata, 3.5)
 		_beltOuter = New tobject.Create(_pipeline._device, titlebeltOutermesh, belt, RENDERFLAG_WIREFRAME)
-		_beltOuter.setColourWireframe(0.6, 0.6, 0.6, 1.0)
+		_beltOuter.setColourWireframe(0.5, 0.5, 0.5, 1.0)
 		_beltOuter.setname("title asteroid belt outer")
 
 		Local rotationOuter:tRotationAnimator = New tRotationAnimator
@@ -1110,38 +1150,40 @@ Type tGame
 		_beltOuter.addAnimator(rotationOuter)
 		
 		Local titlebeltInnermeshData:String = New tasteroidbelt.CreateInner()
-		Local titlebeltInnermesh:tmesh = parsemeshdata(titlebeltInnermeshdata, 1.0)
+		Local titlebeltInnermesh:tmesh = parsemeshdata(titlebeltInnermeshdata, 3.5)
 		_beltInner = New tobject.Create(_pipeline._device, titlebeltInnermesh, belt, RENDERFLAG_WIREFRAME)
-		_beltInner.setColourWireframe(0.6, 0.6, 0.6, 1.0)
+		_beltInner.setColourWireframe(0.6, 0.6, 0.7, 1.0)
 		_beltInner.setname("title asteroid belt inner")
 
 		Local rotationInner:tRotationAnimator = New tRotationAnimator
-		rotationInner.init(0.0, 0.0, 0.12)
+		rotationInner.init(0.0, 0.0, 0.11)
 		_beltInner.addAnimator(rotationInner)
 
 		' press to start
 		msg = "press space to play"
 		_pressToStart = New tobject
-		_pressToStart.setparent(_gui)
+		_pressToStart.setparent(_scene)
 		_pressToStart.moveTo(0, -4, 0)
 		_pressToStart.addAnimator(New tIntroAnimator)
 		_pressToStart.setname("pressstart")
 	
 		Local pressToStartMesh:tmesh = _font.createsentence(msg)
 		Local pressToStartObject:tobject = New tObject.Create(_pipeline._device, pressToStartMesh, _pressToStart, RENDERFLAG_WIREFRAME)
-		pressToStartObject.moveto( -Float(msg.length)/2, -.5, 0)
+		pressToStartObject.moveto( -msg.length / 2.0, -0.5, 0)
 		pressToStartObject.setName("presstostartobject")
 
 		' create copyright for atari
 		_copyright = New tobject
-		_copyright.setparent(_gui)
-		_copyright.moveTo(0, -21, 25)
+		_copyright.setparent(_scene)
+		_copyright.moveTo(0, -14, -5)
 		_copyright.setname("copyright")
 		
 		msg = "original game idea by atari inc 1979"
 		Local textmesh:tmesh = _font.createSentence(msg)
+		textmesh.scale(0.5, 0.5, 0.5)
+
 		Local text:tobject = New tObject.Create(_pipeline._device, textmesh, _copyright, RENDERFLAG_WIREFRAME)
-		text.moveto( -Float(msg.length)/2, -.5, 0)
+		text.moveto( -Float(msg.length) / 4, -0.25, 0.0)
 		text.setname("copyrighttext")
 	
 		Local textRoller:tRollAnimator = New tRollAnimator
@@ -1149,34 +1191,56 @@ Type tGame
 		_copyright.addAnimator(textRoller)
 
 		' create ship
-		Local shipmesh:tmesh = parsemeshdata(_meshdata.shipWireframe(), 1.0)
-		_shipbasic = New tobject.Create(_pipeline._device, shipmesh, Null, RENDERFLAG_WIREFRAME)
-		_shipbasic.setName("ship")
-		Local shipAnimator:tShipAnimator = New tShipAnimator
-		_shipbasic.addAnimator(shipAnimator)
+		_shipbasic = New tobject
 		_shipbasic.setCollisionId(COLLISION_ID_SHIP)
 		_shipbasic.setCollisionRadius(0.7)
+		_shipbasic.setName("shipbasic")
+		
+		Local shipAnimator:tShipAnimator = New tShipAnimator
+		_shipbasic.addAnimator(shipAnimator)
+		
+		Local shipmeshwire:tmesh = parsemeshdata(_meshdata.shipWireframe(), 1.0)
+		_shipbasicwire = New tobject.Create(_pipeline._device, shipmeshwire, _shipbasic, RENDERFLAG_WIREFRAME)
+		_shipbasicwire.setName("shipbasicwire")
+		_shipbasicwire.moveTo(0.0, 0.0, -0.15)
+
+		Local shipmeshsolid:tmesh = parsemeshdata(_meshdata.shipSolid(), 1.0)
+		_shipbasicsolid = New tobject.Create(_pipeline._device, shipmeshsolid, _shipbasic, RENDERFLAG_SOLID)
+		_shipbasicsolid.setName("shipbasicsolid")
 
 		' upgraded ship
-		Local shipupgrademesh:tmesh = parsemeshdata(_meshdata.shipUpgradeWireframe(), 0.2)
-		_shipupgraded = New tobject.Create(_pipeline._device, shipupgrademesh, Null, RENDERFLAG_WIREFRAME)
+		_shipupgraded = New tobject
 		_shipupgraded.setName("upgradedship")
 		_shipupgraded.addAnimator(shipAnimator)
 		_shipupgraded.setCollisionId(COLLISION_ID_SHIP)
 		_shipupgraded.setCollisionRadius(0.8)
+
+		Local shipupgradedwire:tmesh = parsemeshdata(_meshdata.shipUpgradedWireframe(), 0.2)
+		_shipupgradedwire = New tobject.Create(_pipeline._device, shipupgradedwire, _shipupgraded, RENDERFLAG_WIREFRAME)
+		_shipupgradedwire.setName("shipupgradedwire")
+		_shipupgradedwire.moveTo(0.0, 0.0, -0.15)
+		
+		Local shipupgradedsolid:tmesh = parsemeshdata(_meshdata.shipUpgradedSolid(), 0.2)
+		_shipupgradedsolid = New tobject.Create(_pipeline._device, shipupgradedsolid, _shipupgraded, RENDERFLAG_SOLID)
+		_shipupgradedsolid.setName("shipupgradedsolid")
 		
 		' powerupship
 		Local powerupshipmeshsolid:tmesh = parsemeshdata(_meshdata.powerupshipsolid(), 0.4)
-		Local powerupshipmeshwireframe:tmesh = parsemeshdata(_meshdata.powerupshipWireframe(), 0.42)
+		Local powerupshipmeshwireframe:tmesh = parsemeshdata(_meshdata.powerupshipWireframe(), 0.41)
 		_shipPowerUp = New tobject.Create(_pipeline._device, powerupshipmeshsolid, Null, RENDERFLAG_SOLID)
 		Local powerupshipwireframe:tobject = New tobject.Create(_pipeline._device, powerupshipmeshwireframe, _shipPowerUp, RENDERFLAG_WIREFRAME)
 		_shipPowerUp.setCollisionId(COLLISION_ID_POWERUP)
 		_shipPowerUp.setCollisionRadius(1.0)
 		_shipPowerUp.setname("powerup-ship")
+		_shippowerup.moveto(0.0, -14.0, 0.0)
+		
+		Local anim:trotationanimator = New trotationanimator
+		anim.init(0.0, -1.0, 0.0)
+		_shippowerup.addanimator(anim)
 		
 		' galactic bomb
 		Local bombmesh:tmesh = parsemeshdata(_meshdata.galacticbomb(), 1.0)
-		_galacticBomb = New tobject.Create(_pipeline._device, bombmesh, _gui, RENDERFLAG_WIREFRAME)
+		_galacticBomb = New tobject.Create(_pipeline._device, bombmesh, _scene, RENDERFLAG_WIREFRAME)
 		_galacticBomb.setCollisionId(COLLISION_ID_POWERUP)
 		_galacticBomb.setCollisionRadius(1.0)
 		_galacticBomb.setName("bomb")
@@ -1229,7 +1293,7 @@ Type tGame
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8)
-			rock.setColourSolid(0.1, 0.1, 0.1, 1.0)
+			rock.setColourSolid(0.12, 0.12, 0.12, 1.0)
 			
 			tobjectrock(rock).setSize(3)			
 			_rockstore.addLast(rock)
@@ -1241,7 +1305,7 @@ Type tGame
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8 * 0.6)
-			rock.setColourSolid(0.1, 0.1, 0.1, 1.0)
+			rock.setColourSolid(0.12, 0.12, 0.12, 1.0)
 			
 			tobjectrock(rock).setSize(2)
 			_rockstore.addLast(rock)
@@ -1253,7 +1317,7 @@ Type tGame
 			Local rock:tobject = New tobjectrock.Create(_pipeline._device, rockmesh, Null, RENDERFLAG_SOLID | RENDERFLAG_WIREFRAME)
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8 * 0.3)
-			rock.setColourSolid(0.1, 0.1, 0.1, 1.0)
+			rock.setColourSolid(0.12, 0.12, 0.12, 1.0)
 			
 			tobjectrock(rock).setSize(1)
 			_rockstore.addLast(rock)
@@ -1402,7 +1466,7 @@ Type tGame
 		source :+ "};~n"
 
 		source :+ "struct VSINPUT{~n"
-		source :+ "   float3 pos : POSITION;~n"
+		source :+ "   float4 pos : POSITION;~n"
 		source :+ "};~n"
 		
 		source :+ "struct PSINPUT{~n"
@@ -1413,7 +1477,7 @@ Type tGame
 		source :+ "   PSINPUT vsOut;~n"
 
 		source :+ "   float4x4 viewproj = mul(view, proj);~n"
-		source :+ "   float4 posWorld = mul(float4(vsIn.pos, 1.0f), model);~n"
+		source :+ "   float4 posWorld = mul(float4(vsIn.pos.xyz, 1.0f), model);~n"
 		source :+ "   vsOut.pos = mul(posWorld, viewproj);~n"
 
 		source :+ "   return vsOut;~n"
@@ -1461,7 +1525,7 @@ Type tGame
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
-				rock.setparent(_gui)
+				rock.setparent(_scene)
 				rock.moveTo(Rnd(-29, 29), 18 + Rnd(-1, 1), 0)
 				rock.update(MilliSecs())
 
@@ -1477,7 +1541,7 @@ Type tGame
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
-				rock.setparent(_gui)
+				rock.setparent(_scene)
 				rock.moveTo(Rnd(-29, 29), -18 + Rnd(-1, 1), 0)
 				rock.update(MilliSecs())
 
@@ -1493,7 +1557,7 @@ Type tGame
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
-				rock.setparent(_gui)
+				rock.setparent(_scene)
 				rock.moveTo(-29.5 + Rnd(-1, 1), Rnd(-18, 18), 0)
 				rock.update(MilliSecs())
 
@@ -1509,7 +1573,7 @@ Type tGame
 			_rocksToDestroy :+ 1
 			Local rock:tobject = getRock(3)
 			If rock
-				rock.setparent(_gui)
+				rock.setparent(_scene)
 				rock.moveTo(29 + Rnd(-1, 1), Rnd(-18, 18), 0)
 				rock.update(MilliSecs())
 
@@ -1553,49 +1617,18 @@ Type tGame
 			_pipeline._context.Unmap(_vsConstants, 0)
 
 			renderscene()
-			rendergui()
 
 			_pipeline.Present(True)
 	EndMethod
 	
-	Method rendersolids(scene:tobject)
-		' render scene as black
-		Local colour:Float[] = [0.0, 0.0, 0.0, 1.0]
-		
-		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
-		_pipeline._context.Map(_psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
-		MemCopy(map.pData, colour, 16)
-		_pipeline._context.Unmap(_psConstants, 0)
-		_pipeline._context.PSSetConstantBuffers(0, 1, Varptr _psConstants)
-		
-		' turn on depth testing and solid rendering
-		_pipeline.setWireframeOff()
-		scene.renderSolid(_pipeline._context)
-	EndMethod
-	
-	Method renderwireframes(scene:tobject)
-		' render scene as white wireframe			
-		Local colour:Float[] = [1.0, 1.0, 1.0, 1.0]
-		
-		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
-		_pipeline._context.Map(_psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
-		MemCopy(map.pData, colour, 16)
-		_pipeline._context.Unmap(_psConstants, 0)
-
-		_pipeline.setWireframeOn()
-		scene.renderWireframe(_pipeline._context)
-	EndMethod
-	
 	Method renderscene()
-		_pipeline.turnOnDepthTesting()
-		rendersolids(_scene)
-		renderwireframes(_scene)
-	EndMethod
-	
-	Method rendergui()
-		_pipeline.turnOffDepthTesting()
-		rendersolids(_gui)
-		renderwireframes(_gui)
+		'_pipeline.turnOnDepthTesting()
+		_pipeline.setWireframeOff()
+		_scene.renderSolid(_pipeline._context)
+
+		'_pipeline.turnOffDepthTesting()
+		_pipeline.setWireframeOn()
+		_scene.renderWireframe(_pipeline._context)
 	EndMethod
 	
 	' a central method to break the rock, the ship bullet, alien bullet and the alien can break rocks
@@ -1612,7 +1645,7 @@ Type tGame
 		Local posz:Float = rock._posz
 
 		Local epicentre:tobject = New tobject
-		epicentre.setparent(_gui)
+		epicentre.setparent(_scene)
 
 		PlaySound(_sampleRocks[rock._size - 1])
 
@@ -1652,7 +1685,7 @@ Type tGame
 					vely = Min(Max(-0.35,vely), 0.35)
 					
 					newrock.moveTo(posx, posy, posz)
-					newrock.setparent(_gui)
+					newrock.setparent(_scene)
 						
 					' smaller rocks will move faster
 					Local rockanim:tRockAnimator = New tRockAnimator
@@ -1982,70 +2015,6 @@ Type tobjectScore Extends tobject
 	EndMethod
 EndType
 
-Rem
-Type tobjectAlienShip Extends tObject
-	Field _wireObject:tObject
-
-	Method Create:tobjectAlienShip(device:ID3D11Device, solidmesh:tmesh, parent:tobject, renderFlag:Int)
-		Super.Create(device, solidMesh, parent, renderflag)
-		
-		Return Self
-	EndMethod
-	
-	Method setWireframeObject(device:ID3D11Device, wireframeMesh:tMesh, parent:tobject)
-		_wireObject = New tObject.Create(device, wireframeMesh, parent, RENDERFLAG_WIREFRAME)
-	EndMethod
-	
-	Method renderSolid(context:ID3D11DeviceContext)
-		' everything rendered solid is black
-		Local root:tobject = getRoot()
-		Local game:tgame = tgame(root._extra)
-			
-		' set the colour
-		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
-		context.Map(game._psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
-		MemCopy(map.pData, [0.3, 0.3, 0.3, 1.0], 16)
-		context.Unmap(game._psConstants, 0)
-
-		'render(context)
-		' manual 'render(context)'
-		context.Map(_worldbuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
-		MemCopy(map.pData, _world, 64)
-		context.Unmap(_worldbuffer, 0)
-		
-		Local strides:Int = 12
-		Local offsets:Int = 0
-		context.IASetVertexBuffers(0, 1, Varptr _vertexBuffer, Varptr strides, Varptr offsets)
-		context.IASetIndexBuffer(_indexBuffer, DXGI_FORMAT_R32_UINT, 0)
-		context.VSSetConstantBuffers(1, 1, Varptr _worldbuffer)
-		context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
-		context.DrawIndexed(_indexCount, 0, 0)
-
-		For Local obj:tobject = EachIn _children
-			obj.renderSolid(context)
-		Next
-	EndMethod
-
-	Method renderWireframe(context:ID3D11DeviceContext)
-		'DebugStop
-		'If _renderflag & RENDERFLAG_WIREFRAME
-		'	Local root:tobject = getRoot()
-		'	Local game:tgame = tgame(root._extra)
-			
-		'	Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
-		'	context.Map(game._psConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
-		'	MemCopy(map.pData, _colour, 16)
-		'	context.Unmap(game._psConstants, 0)
-			
-		'	render(context)
-		'EndIf
-		'
-		'For Local obj:tobject = EachIn _children
-		'	obj.renderWireframe(context)
-		'Next
-	EndMethod
-EndType
-EndRem
 Type tanimator
 	Method animate(obj:tobject, timeMs:Int) Abstract
 EndType
@@ -2067,14 +2036,14 @@ Type tIntroAnimator Extends tAnimator
 			game._pressToStart.setParent(Null)
 			game._title.setparent(Null)
 			game._currentWave = 1
-			
+
 			game._ship = game._shipbasic
 			game._powerup = Null
 			game._alien = Null
 			
 			Local begin:tBeginLevelAnimator = New tBeginLevelAnimator
 			begin.init(timeMs)
-			game._gui.addAnimator(begin)
+			game._scene.addAnimator(begin)
 		EndIf
 	EndMethod
 EndType
@@ -2094,24 +2063,24 @@ Type tBeginLevelAnimator Extends tAnimator
 		Local a:Int = Rand(0, 3)
 		Select a
 		Case 0
-			_targetx = 11.0
-			_targety = 5.5
-			_targetz = -35.0
+			_targetx = 34.0
+			_targety = 22.0
+			_targetz = 30.0
 			
 		Case 1
-			_targetx = -11.0
-			_targety = 5.5
-			_targetz = -35.0
+			_targetx = 14.0
+			_targety = 28.0
+			_targetz = 24.0
 
 		Case 2
-			_targetx = 5.0
-			_targety = 8.5
-			_targetz = -35.0
+			_targetx = -14.0
+			_targety = 28.0
+			_targetz = 24.0
 
 		Case 3
-			_targetx = -5.0
-			_targety = 8.5
-			_targetz = -35.0
+			_targetx = -34.0
+			_targety = 22.0
+			_targetz = 30.0
 		EndSelect	
 	EndMethod
 
@@ -2136,8 +2105,8 @@ Type tBeginLevelAnimator Extends tAnimator
 			
 			Local delta:Float = Sqr(distx * distx + disty * disty + distz * distz)
 			If delta < 0.1
-				game._ship.setparent(game._gui)	
-				game._getready.setparent(game._gui)
+				game._ship.setparent(game._scene)	
+				game._getready.setparent(game._scene)
 				_initTimeMs = timeMs
 				_state = 1
 			EndIf
@@ -2145,7 +2114,7 @@ Type tBeginLevelAnimator Extends tAnimator
 		Else If _state = 1
 			If timeMs > _initTimeMs + 1000
 				game._getready.setparent(Null)
-				game._gui.removeAnimator(Self)
+				game._scene.removeAnimator(Self)
 				game.beginGamelevel()
 			EndIf
 		EndIf
@@ -2187,8 +2156,8 @@ Type tLeaveLevelAnimator Extends tAnimator
 				Local z:Float = core._posz
 				
 				Local destx:Float = 0.0
-				Local desty:Float = 5.5
-				Local destz:Float = 0.0
+				Local desty:Float = 10.0
+				Local destz:Float = 160.0
 				
 				Local distx:Float = destx - x
 				Local disty:Float = desty - y
@@ -2202,9 +2171,9 @@ Type tLeaveLevelAnimator Extends tAnimator
 				Local delta:Float = Sqr(distx * distx + disty * disty + distz * distz)
 				
 				If delta < 0.1
-					core.moveTo(0.0, 5.5, 0.0)
+					core.moveTo(0.0, 10.0, 160.0)
 	
-					game._waveComplete.setparent(game._gui)
+					game._waveComplete.setparent(game._scene)
 					_initTimeMs = timeMs
 					_state = 1
 				EndIf
@@ -2212,12 +2181,12 @@ Type tLeaveLevelAnimator Extends tAnimator
 		
 		Else If _state = 1
 			If timeMs > _initTimeMs + 1000
-				game._gui.removeanimator(Self)
+				game._scene.removeanimator(Self)
 
 				Local anim:twavecompleteanimator = New twavecompleteanimator
 				anim.init(timeMs)
-				game._waveComplete.setparent(game._gui)
-				game._gui.addAnimator(anim)
+				game._waveComplete.setparent(game._scene)
+				game._scene.addAnimator(anim)
 			EndIf
 		EndIf
 	EndMethod
@@ -2259,7 +2228,7 @@ Type tWaveCompleteAnimator Extends tAnimator
 			
 			Local begin:tBeginLevelAnimator = New tBeginLevelAnimator
 			begin.init(timeMs)
-			game._gui.addAnimator(begin)
+			game._scene.addAnimator(begin)
 		EndIf
 	EndMethod
 EndType
@@ -2365,7 +2334,7 @@ Type tShipAnimator Extends tanimator
 			animator.init(velx, vely, 0.0, 500, timeMs)
 		
 			bullet.addAnimator(animator)
-			bullet.setParent(game._gui)
+			bullet.setParent(game._scene)
 			bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
 				
 			If game._ship = game._shipUpgraded
@@ -2384,7 +2353,7 @@ Type tShipAnimator Extends tanimator
 				vely :- Cos(obj._rotz + 25) * 2
 
 				bullet.addAnimator(animator)
-				bullet.setParent(game._gui)
+				bullet.setParent(game._scene)
 				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
 
 				' create another bullet
@@ -2401,7 +2370,7 @@ Type tShipAnimator Extends tanimator
 				vely = Cos(obj._rotz) - Cos(obj._rotz - 25) * 2
 				
 				bullet.addAnimator(animator)
-				bullet.setParent(game._gui)
+				bullet.setParent(game._scene)
 				bullet.moveTo(obj._posx + velx, obj._posy + vely, 0.0)
 			EndIf				
 		EndIf	
@@ -2627,7 +2596,7 @@ Type tAlienShipControlAnimator Extends tAnimator
 					_dirTimeMs = timeMs
 
 					' position ship at the left or right edge
-					alien.setParent(game._gui)
+					alien.setParent(game._scene)
 					alien.moveTo(30.0 * dir, Rnd(-18.0, 18.0), 0.0)
 					
 					' make sure to move into the game play area
@@ -2657,7 +2626,7 @@ Type tAlienShipControlAnimator Extends tAnimator
 					Local bullet:tobject = game._alienbullet
 					game._alienbullet = Null
 								
-					bullet.setparent(game._gui)
+					bullet.setparent(game._scene)
 					bullet.moveTo(game._alien._posx, game._alien._posy, game._alien._posz)
 					
 					Local rot:tRotationAnimator = New tRotationAnimator
@@ -2733,14 +2702,13 @@ Type tBulletToRockHandler Extends tCollisionHandler
 		bullet.setParent(Null)
 		game._bulletstore.addlast(bullet)
 
-		' call this method as the alien ship also breaks the rocks - don't want to duplicate too much code
 		game.destroyRock(tobjectRock(rock), collisionData._timeMs)
 
 		' wave complete?
 		If game._rocksTodestroy = 0
 			Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
 			leaveLevel.init(collisionData._timeMs)
-			game._gui.addanimator(leaveLevel)
+			game._scene.addanimator(leaveLevel)
 		EndIf
 	EndMethod
 EndType
@@ -2780,7 +2748,7 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 			If Not game._powerUp
 				If game._ship = game._shipbasic
 					Local powerup:tobject = game._shipPowerUp
-					powerUp.setParent(game._gui)
+					powerUp.setParent(game._scene)
 					powerUp.moveTo(alien._posx, alien._posy, alien._posz)
 					Local anim:tRotationAnimator = New tRotationAnimator
 					anim.init(0.0, -1.0, 0.0)
@@ -2808,7 +2776,7 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 			
 			Local particle:tobject = tobject(game._particlestore.removefirst())
 			If particle
-				particle.setParent(game._gui)
+				particle.setParent(game._scene)
 				particle.moveTo(posx, posy, posz)
 				particle.addAnimator(particleanim)
 			EndIf
@@ -2835,7 +2803,7 @@ Type tAlienBulletToRockHandler Extends tCollisionHandler
 		If game._rocksTodestroy = 0
 			Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
 			leaveLevel.init(collisionData._timeMs)
-			game._gui.addanimator(leaveLevel)
+			game._scene.addanimator(leaveLevel)
 		EndIf
 
 		Local bullet:tobject = collisionData._src
@@ -2858,7 +2826,7 @@ Type tAlienShipToRockHandler Extends tCollisionHandler
 		'If game._rocksTodestroy = 0
 		'	Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
 		'	leaveLevel.init(collisionData._timeMs)
-		'	game._gui.addanimator(leaveLevel)
+		'	game._scene.addanimator(leaveLevel)
 		'Else
 			' reset the time for alien to appear
 		'	For Local anim:tanimator = EachIn root._animators
