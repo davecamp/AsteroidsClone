@@ -1,2 +1,28 @@
-Official Asteroids sound samples for use in MAME v0.36b16 or earlier.
-All samples modified/enhanced by Gyrovision.
+Credits:
+
+The following files are	
+    " Official Asteroids sound samples for use in MAME v0.36b16 or earlier.
+      All samples modified/enhanced by Gyrovision. "
+
+    explode1.wav
+    explode2.wav
+    explode3.wav
+    fire.wav
+    life.wav
+    lsaucer.wav
+    sfire.wav
+    ssaucer.wav
+    thrust.wav
+    thumphi.wav
+    thumplo.wav
+
+The following files are
+    " Created by Intermediate Design Graphics. "
+
+    upgrade.wav
+
+The following files are
+    " Created by Dave Camp using the excellent OpenMT available at https://openmpt.org "
+
+	intro.wav
+

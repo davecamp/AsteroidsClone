@@ -808,7 +808,7 @@ Type tGpuD3D11
 
 	Field _backbufferView:ID3D11RendertargetView
 	Field _depthstencilView:ID3D11DepthstencilView
-
+	
 	Method Create:TGpuD3D11(Width:Int, Height:Int, WindowHandle:Byte Ptr)
 		createDeviceAndSwapchain(Width, Height, WindowHandle)
 		createDepthtarget(Width, Height)
@@ -909,7 +909,7 @@ Type tGpuD3D11
 		_context.OMSetRenderTargets(1, Varptr _backbufferView, _depthstencilView)
 	EndMethod
 
-	Method Cls(colour:Float[])
+	Method ClearBackbuffer(colour:Float[])
 		_context.clearDepthStencilView(_depthstencilView, D3D11_CLEAR_DEPTH, 1.0, 0)
 		_context.clearRendertargetView(_backbufferView, colour)
 	EndMethod
@@ -933,6 +933,10 @@ Type tGpuD3D11
 	Method TurnOffDepthTesting()
 		_context.OMSetDepthStencilState(_depthstencilstate, 0)
 	EndMethod
+	
+	Method setBackbuffer()
+		_context.OMSetRenderTargets(1, Varptr _backbufferView, _depthstencilView)
+	EndMethod
 EndType
 
 Type tGame
@@ -943,10 +947,20 @@ Type tGame
 	
 	Field _vsConstants:ID3D11Buffer
 	Field _psConstants:ID3D11Buffer
-	
+
 	Field _inputLayout:ID3D11InputLayout
 	Field _vertexShader:ID3D11VertexShader
 	Field _pixelShader:ID3D11PixelShader
+	
+	Field _quadVertexBuffer:ID3D11Buffer
+	Field _quadConstantsBuffeR:ID3D11Buffer
+	Field _quadRendertargetView:ID3D11RendertargetView
+	Field _quadShaderView:ID3D11ShaderResourceView
+	Field _quadInputLayout:ID3D11InputLayout
+	Field _quadVertexShader:ID3D11VertexShader
+	Field _quadPixelShader:ID3D11PixelShader
+	Field _quadSampler:ID3D11SamplerState
+	Field _quadParamConstants:ID3D11Buffer
 	
 	Field _view:Float[16]
 	Field _proj:Float[16]
@@ -964,6 +978,11 @@ Type tGame
 	Field _shipupgraded:tobject
 	Field _shipupgradedwire:tobject
 	Field _shipupgradedsolid:tobject
+	
+	Field _bombFreq:Float
+	Field _bombTimeMs:Float
+	Field _bombCentreX:Float
+	Field _bombCentreY:Float
 
 	Field _powerUp:tobject 		' on screen power up
 	Field _shippowerup:tobject
@@ -1005,10 +1024,10 @@ Type tGame
 	Field _sampleUpgrade:TSound
 	Field _sampleShot:TSound
 	Field _sampleLife:TSound
-	'Field _sampleThrust:TSound
 	Field _sampleRocks:TSound[3]
 	Field _sampleAlien:TSound[2]	
 	Field _sampleThump:TSound[2]
+	Field _sampleAlienShot:TSound
 	Field _channelAlien:TChannel
 	
 	Field _sampleIntro:TSound
@@ -1060,7 +1079,127 @@ Type tGame
 				 0.0, 0.0, 0.0, 1.0]
 		
 		createShaderResources()
+		createQuadResources(Width, Height)
 		createGameObjects()
+		
+		Local bombAnim:tBombParameterAnimator = New tBombParameterAnimator
+		_scene.addAnimator(bombAnim)
+	EndMethod
+	
+	Method createQuadResources(Width:Int, Height:Int)
+		' create vertex buffer
+		Local quadVertices:Float[]
+		quadVertices :+ [-1.0, -1.0, 0.0, 0.0, 1.0]
+		quadVertices :+ [-1.0,  1.0, 0.0, 0.0, 0.0]
+		quadVertices :+ [ 1.0,  1.0, 0.0, 1.0, 0.0]
+		quadVertices :+ [-1.0, -1.0, 0.0, 0.0, 1.0]
+		quadVertices :+ [ 1.0,  1.0, 0.0, 1.0, 0.0]
+		quadVertices :+ [ 1.0, -1.0, 0.0, 1.0, 1.0]
+		
+		Local desc:D3D11_BUFFER_DESC = New D3D11_BUFFER_DESC
+		desc.ByteWidth = SizeOf(quadVertices)
+		desc.Usage = D3D11_USAGE_DEFAULT
+		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER
+		
+		Local data:D3D11_SUBRESOURCE_DATA = New D3D11_SUBRESOURCE_DATA
+		data.pSysMem = quadVertices
+		
+		_pipeline._device.createBuffer(desc, data, _quadVertexBuffer)
+		If Not _quadVertexBuffer Throw " cannot create quad vertex buffer"
+		
+		' bomb parameters
+		desc.ByteWidth = 16
+		desc.Usage = D3D11_USAGE_DYNAMIC
+		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE
+		
+		_pipeline._device.createBuffer(desc, Null, _quadConstantsBuffer)
+		If Not _quadConstantsBuffer Throw " cannot create quad constants buffer"
+
+		' create render target texture
+		Local textureDesc:D3D11_TEXTURE2D_DESC = New D3D11_TEXTURE2D_DESC
+		textureDesc.Width = Width
+		textureDesc.Height = Height
+		textureDesc.MipLevels = 1
+		textureDesc.ArraySize = 1
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM
+		textureDesc.SampleDesc_Count = 1
+		textureDesc.SampleDesc_Quality = 0
+		textureDesc.Usage = D3D11_USAGE_DEFAULT
+		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE
+		textureDesc.CPUAccessFlags = 0
+		textureDesc.MiscFlags = 0
+		
+		Local texture:ID3D11Texture2D
+		_pipeline._device.createTexture2D(textureDesc, Null, texture)
+		If Not texture Throw " could not create render target texture"
+
+		' create render target from texture
+		Local targetDesc:D3D11_RENDER_TARGET_VIEW_DESC = New D3D11_RENDER_TARGET_VIEW_DESC
+		targetDesc.format = DXGI_FORMAT_R8G8B8A8_UNORM
+		targetDesc.viewDimension = 4 ' D3D11_RTV_DIMENSION_TEXTURE2D
+		
+		_pipeline._device.createRenderTargetView(texture, targetDesc, _quadRendertargetView)
+		If Not _quadRendertargetView Throw " could not create render target view"
+
+		' create shader resource from texture
+		Local shaderDesc:D3D11_SHADER_RESOURCE_VIEW_DESC = New D3D11_SHADER_RESOURCE_VIEW_DESC
+		shaderDesc.format = DXGI_FORMAT_R8G8B8A8_UNORM
+		shaderDesc.viewDimension = 4 ' D3D11_RTV_DIMENSION_TEXTURE2D
+		shaderDesc.Texture_MipLevels = 1
+		
+		_pipeline._device.createShaderResourceView(texture, shaderDesc, _quadShaderView)
+		If Not _quadShaderView Throw " could not create shader resource view for render target"
+	
+		' texture sampler
+		Local samplerDesc:D3D11_SAMPLER_DESC = New D3D11_SAMPLER_DESC
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP
+		samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS
+		
+		_pipeline._device.createSamplerState(samplerDesc, _quadSampler)
+		If Not _quadSampler Throw " cannot create quad texture sampler"
+		
+		' shaders
+		Local vertexshaderByteCode:ID3DBlob = createShaderSourceByteCode(shaderSource(), "VSMainQuad", "vs_5_0")
+		Local pixelshaderByteCode:ID3DBlob = createShaderSourceByteCode(shaderSource(), "PSMainQuad", "ps_5_0")
+
+		' input layout
+		Local layout:Int[]
+		layout :+ [0, 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0]
+		layout :+ [0, 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 ]
+
+		Local pPosition:Byte Ptr = "POSITION".ToCString()
+		Local pUV:Byte Ptr = "TEXCOORD".ToCString()
+		layout[0] = Int(pPosition)
+		layout[7] = Int(pUV)
+
+		Local shaderByteCodeLength:Int = vertexshaderByteCode.getBufferSize()
+		Local pShaderByteCode:Byte Ptr = vertexshaderByteCode.getBufferPointer()
+		
+		_pipeline._device.createInputLayout(layout, layout.length / 7, pShaderByteCode, shaderByteCodeLength, _quadInputLayout)
+		If Not _quadInputLayout Throw " cannot create quad input layout"
+
+		' vertex shader
+		_pipeline._device.createVertexShader(pShaderByteCode, shaderByteCodeLength, Null, _quadVertexShader)
+		If Not _quadVertexShader Throw " cannot create quad vertex shader"
+	
+		' compile and create pixel shader
+		shaderByteCodeLength = pixelshaderByteCode.getBufferSize()
+		pShaderByteCode = pixelshaderByteCode.getBufferPointer()
+
+		_pipeline._device.createPixelShader(pShaderByteCode, shaderByteCodeLength, Null, _quadPixelShader)
+		If Not _quadPixelShader Throw " cannot create quad pixel shader"
+
+		' clean up
+		texture.release_()
+		MemFree(pPosition)
+		MemFree(pUV)		
+		vertexshaderByteCode.Release_()
+		pixelshaderByteCode.Release_()	
+
 	EndMethod
 	
 	Method createGameObjects()
@@ -1070,13 +1209,12 @@ Type tGame
 		_sampleUpgrade = LoadSound("sounds/upgrade.wav")
 		_sampleShot = LoadSound("sounds/sfire.wav")
 		_sampleLife = LoadSound("sounds/life.wav")
-		'_sampleThrust = LoadSound("sounds/thrust2.wav")
 		_sampleRocks[0] = LoadSound("sounds/explode3.wav")
 		_sampleRocks[1] = LoadSound("sounds/explode2.wav")
 		_sampleRocks[2] = LoadSound("sounds/explode1.wav")
 		_sampleAlien[0] = LoadSound("sounds/lsaucer.wav", SOUND_LOOP)
 		_sampleAlien[1] = LoadSound("sounds/ssaucer.wav", SOUND_LOOP)
-
+		_sampleAlienShot = LoadSound("sounds/sfire.wav")
 		
 		' font
 		_font = New tFont
@@ -1240,10 +1378,10 @@ Type tGame
 		
 		' galactic bomb
 		Local bombmesh:tmesh = parsemeshdata(_meshdata.galacticbomb(), 1.0)
-		_galacticBomb = New tobject.Create(_pipeline._device, bombmesh, _scene, RENDERFLAG_WIREFRAME)
-		_galacticBomb.setCollisionId(COLLISION_ID_POWERUP)
-		_galacticBomb.setCollisionRadius(1.0)
-		_galacticBomb.setName("bomb")
+		'_galacticBomb = New tobject.Create(_pipeline._device, bombmesh, _scene, RENDERFLAG_WIREFRAME)
+		'_galacticBomb.setCollisionId(COLLISION_ID_POWERUP)
+		'_galacticBomb.setCollisionRadius(1.0)
+		'_galacticBomb.setName("bomb")
 
 		' alien big ship
 		Local alienmesh:tmesh = parseMeshData(_meshdata.alienbigwireframe(), 1.0)
@@ -1389,12 +1527,12 @@ Type tGame
 		desc.cpuAccessFlags = D3D11_CPU_ACCESS_WRITE
 
 		_pipeline._device.createBuffer(desc, Null, _vsConstants)
-		If Not _vsConstants DebugLog " cannot create buffer for vertex shader per frame constants"
+		If Not _vsConstants Throw " cannot create buffer for vertex shader per frame constants"
 		
 		' pixel shader constants - per frame
 		desc.ByteWidth = 16
 		_pipeline._device.createBuffer(desc, Null, _psConstants)
-		If Not _vsConstants DebugLog " cannot create buffer for pixel shader per frame constants"
+		If Not _vsConstants Throw " cannot create buffer for pixel shader per frame constants"
 		
 		' shaders
 		Local vertexshaderByteCode:ID3DBlob = createShaderSourceByteCode(shaderSource(), "VSMain", "vs_5_0")
@@ -1409,23 +1547,23 @@ Type tGame
 		Local pShaderByteCode:Byte Ptr = vertexshaderByteCode.getBufferPointer()
 		
 		_pipeline._device.createInputLayout(layout, layout.length / 7, pShaderByteCode, shaderByteCodeLength, _inputLayout)
-		If Not _inputLayout DebugLog " cannot create input layout"
+		If Not _inputLayout Throw " cannot create input layout"
 
 		' vertex shader
 		_pipeline._device.createVertexShader(pShaderByteCode, shaderByteCodeLength, Null, _vertexShader)
-		If Not _vertexShader DebugLog " cannot create vertex shader"
+		If Not _vertexShader Throw " cannot create vertex shader"
 	
 		' compile and create pixel shader
 		shaderByteCodeLength = pixelshaderByteCode.getBufferSize()
 		pShaderByteCode = pixelshaderByteCode.getBufferPointer()
 
 		_pipeline._device.createPixelShader(pShaderByteCode, shaderByteCodeLength, Null, _pixelShader)
-		If Not _pixelShader DebugLog " cannot create pixel shader"
+		If Not _pixelShader Throw " cannot create pixel shader"
 
 		' clean up
 		MemFree(pPosition)		
 		vertexshaderByteCode.Release_()
-		pixelshaderByteCode.Release_()		
+		pixelshaderByteCode.Release_()	
 	EndMethod
 
 	Method createShaderSourceByteCode:ID3DBlob(source:String, func:String, profile:String)
@@ -1443,7 +1581,7 @@ Type tGame
 		D3DCompile(pShader, source.length, Null, Null, Null, pFunc, pProfile, flag, 0, byteCode, error)
 		
 		If error
-			DebugLog String.FromCString(error.getBufferPointer())
+			Throw String.FromCString(error.getBufferPointer())
 			error.release_()
 		EndIf
 		
@@ -1467,7 +1605,7 @@ Type tGame
 
 		source :+ "struct VSINPUT{~n"
 		source :+ "   float4 pos : POSITION;~n"
-		source :+ "};~n"
+		source :+ "};~n" ' 10
 		
 		source :+ "struct PSINPUT{~n"
 		source :+ "   float4 pos : SV_POSITION;~n"
@@ -1481,7 +1619,7 @@ Type tGame
 		source :+ "   vsOut.pos = mul(posWorld, viewproj);~n"
 
 		source :+ "   return vsOut;~n"
-		source :+ "}~n"
+		source :+ "}~n" ' 20
 		
 		source :+ "cbuffer perFrame{~n"
 		source :+ "    float4 colour;~n"
@@ -1490,14 +1628,46 @@ Type tGame
 		source :+ "    return colour;~n"
 		source :+ "};~n"
 
+		source :+ "Texture2D quadTexture;~n"
+		source :+ "SamplerState quadSampler;~n"
+		
+		source :+ "struct VSINPUTQUAD{~n"
+		source :+ "   float3 pos : POSITION;~n" ' 30
+		source :+ "   float2 uv : TEXCOORD0;~n"
+		source :+ "};~n"
+		
+		source :+ "struct PSINPUTQUAD{~n"
+		source :+ "   float4 pos : SV_POSITION;~n"
+		source :+ "   float2 uv : TEXCOORD0;~n"
+		source :+ "};~n"
+
+		source :+ "PSINPUTQUAD VSMainQuad(VSINPUTQUAD vsIn){~n"
+		source :+ "   PSINPUTQUAD vsOut;~n"
+
+		source :+ "   vsOut.pos = float4(vsIn.pos, 1.0);~n"
+		source :+ "   vsOut.uv = vsIn.uv;~n" ' 40
+		source :+ "   return vsOut;~n"
+		source :+ "}~n"
+		
+		source :+ "cbuffer params{~n"
+		source :+ "    float freq;~n"
+		source :+ "    float time;~n"
+		source :+ "    float2 centre;~n"
+		source :+ "}~n"
+
+		source :+ "float4 PSMainQuad(PSINPUTQUAD psIn) : SV_Target{~n"
+		source :+ "    float2 uv =  psIn.uv + 1;~n" 
+		source :+ "    float r  = length(uv);~n"
+		source :+ "    float z = sin(r + time) / r;~n"
+
+		source :+ "    return quadTexture.Sample(quadSampler, psIn.uv + z);~n"
+		source :+ "};~n"
+
+
 		Return source
 	EndMethod
 	
-	Method run()						
-		_pipeline.setWireframeOn()
-		_pipeline._context.IASetInputLayout(_inputLayout)
-		_pipeline._context.PSSetConstantBuffers(0, 1, Varptr _psConstants)
-
+	Method run()
 		set3DProjection(30.0, 1200.0 / 700.0, 0.1, 1000.0)
 
 		While Not AppTerminate()
@@ -1602,8 +1772,8 @@ Type tGame
 	EndMethod
 
 	Method rendergame()
-			_pipeline.Cls([0.0, 0.0, 0.0, 1.0])
-
+			prepareToRenderToQuad()
+			
 			' start frame
 			_pipeline._context.VSSetConstantBuffers(0, 1, Varptr _vsConstants)
 			_pipeline._context.VSSetShader(_vertexShader, Null, 0)
@@ -1618,20 +1788,61 @@ Type tGame
 
 			renderscene()
 
+			' need to quad shader, set the texture for the quad, render quad to backbuffer
+			renderQuadToBackBuffer()
+
 			_pipeline.Present(True)
 	EndMethod
 	
+	Method prepareToRenderToQuad()
+		Local colour:Float[0.0, 0.0, 0.0, 1.0]
+		
+		_pipeline._context.OMSetRenderTargets(1, Varptr _quadRendertargetView, _pipeline._depthstencilView)
+		_pipeline._context.clearDepthStencilView(_pipeline._depthstencilView, D3D11_CLEAR_DEPTH, 1.0, 0)
+		_pipeline._context.clearRendertargetView(_quadRendertargetView, colour)
+
+		_pipeline._context.IASetInputLayout(_inputLayout)
+		_pipeline._context.VSSetShader(_vertexShader, Null, 0)
+		_pipeline._context.PSSetShader(_pixelShader, Null, 0)
+		_pipeline._context.PSSetConstantBuffers(0, 1, Varptr _psConstants)
+	EndMethod
+	
+	Method renderQuadToBackBuffer()
+		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
+		_pipeline._context.map(_quadConstantsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
+		MemCopy(map.pData, Varptr _bombFreq, 4)
+		MemCopy(map.pData + 4, Varptr _bombTimeMs, 4)
+		MemCopy(map.pData + 8, Varptr _bombCentreX, 4)
+		MemCopy(map.pData + 12, Varptr _bombCentreY, 4)
+		_pipeline._context.Unmap(_quadConstantsBuffer, 0)
+		
+		Local stride:Int = 20
+		Local offset:Int = 0
+
+		_pipeline.setBackbuffer()
+		_pipeline.setWireframeOff()
+		
+		_pipeline._context.IASetInputLayout(_quadInputLayout)
+		_pipeline._context.IASetVertexBuffers(0, 1, Varptr _quadVertexBuffer, Varptr stride, Varptr offset)
+		_pipeline._context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
+		_pipeline._context.VSSetShader(_quadVertexShader, Null, 0)
+		_pipeline._context.PSSetConstantBuffers(0, 1, Varptr _quadConstantsBuffer)	
+		_pipeline._context.PSSetShader(_quadPixelShader, Null, 0)
+		_pipeline._context.PSSetShaderResources(0, 1, Varptr _quadShaderView)
+		_pipeline._context.PSSetSamplers(0, 1, Varptr _quadSampler)
+		
+		_pipeline._context.draw(6, 0)
+	EndMethod
+	
 	Method renderscene()
-		'_pipeline.turnOnDepthTesting()
 		_pipeline.setWireframeOff()
 		_scene.renderSolid(_pipeline._context)
 
-		'_pipeline.turnOffDepthTesting()
 		_pipeline.setWireframeOn()
 		_scene.renderWireframe(_pipeline._context)
 	EndMethod
 	
-	' a central method to break the rock, the ship bullet, alien bullet and the alien can break rocks
+	' a central method to break the rock, the ship bullet, alien bullet can break rocks
 	Method destroyRock(rock:tobjectrock, timeMs:Int)
 		' remove the rock
 		rock._animators.clear()
@@ -1764,7 +1975,7 @@ Type tobject
 		data.pSysMem = mesh._vertices
 		
 		device.createBuffer(desc, data, _vertexBuffer)
-		If Not _vertexBuffer DebugLog " cannot create vertex buffer"
+		If Not _vertexBuffer Throw " cannot create vertex buffer"
 
 		' index buffer
 		desc.ByteWidth = SizeOf(mesh._indices)
@@ -1773,7 +1984,7 @@ Type tobject
 		data.pSysMem = mesh._indices
 		
 		device.createBuffer(desc, data, _indexBuffer)
-		If Not _indexBuffer DebugLog " cannot create index buffer"
+		If Not _indexBuffer Throw " cannot create index buffer"
 
 		' world buffer
 		desc.ByteWidth = 64
@@ -1782,7 +1993,7 @@ Type tobject
 		desc.cpuAccessFlags = D3D11_CPU_ACCESS_WRITE
 
 		device.createBuffer(desc, Null, _worldBuffer)
-		If Not _worldBuffer DebugLog " cannot create world constant buffer"
+		If Not _worldBuffer Throw " cannot create world constant buffer"
 
 		_indexCount = mesh._indices.length
 		_topology = mesh._topology
@@ -2568,9 +2779,14 @@ Type tAlienShipControlAnimator Extends tAnimator
 	Field _dirTimeMs:Int
 	Field _gameActive:Int
 	Field _velAnim:tVelocityAnimator
+	
+	Const SHOT_LIFETIME_MS:Int = 850
+	Field _shotLifeTimeMs:Int
+	Field _lastShotMs:Int
 
 	Method init(timeMs:Int, gameActive:Int)
 		_timeMs = timeMs
+		_lastShotMs = timeMs - SHOT_LIFETIME_MS
 		_gameActive = gameActive
 	EndMethod
 	
@@ -2621,11 +2837,11 @@ Type tAlienShipControlAnimator Extends tAnimator
 			EndIf
 			
 			If game._alien
-				' if the bullet is available then shoot
-				If game._alienbullet
+				' if the bullet is available then shoot once every second
+				If game._alienbullet And timeMs > _lastShotMs + SHOT_LIFETIME_MS
 					Local bullet:tobject = game._alienbullet
 					game._alienbullet = Null
-								
+
 					bullet.setparent(game._scene)
 					bullet.moveTo(game._alien._posx, game._alien._posy, game._alien._posz)
 					
@@ -2645,8 +2861,11 @@ Type tAlienShipControlAnimator Extends tAnimator
 					
 					' apply
 					Local anim:tAlienBulletAnimator = New tAlienBulletAnimator
-					anim.init(dirx, diry, 0.0, timeMs, 850)
+					anim.init(dirx, diry, 0.0, timeMs, SHOT_LIFETIME_MS)
 					bullet.addAnimator(anim)
+					
+					_lastShotMs = timeMs
+					PlaySound(game._sampleAlienShot)
 				EndIf
 				
 				' after 2 seconds change direction
@@ -2673,6 +2892,24 @@ Type tAlienShipControlAnimator Extends tAnimator
 				EndIf
 			EndIf
 		EndIf
+	EndMethod
+EndType
+
+Type tBombParameterAnimator Extends tAnimator
+	Field _Freq:Float
+
+	Method animate(obj:tobject, timeMs:Int)
+		Local root:tobject = obj.getRoot()
+		If Not root Return
+		
+		Local game:tgame = tgame(root._extra)
+		
+		_Freq = Cos(timeMs Mod 360) * 1.0
+		game._bombFreq = 0.0
+		
+		game._bombCentreX = 0.5
+		game._bombCentreY = 0.5
+		game._bombTimeMs = Sin(timeMs Mod 360) * 0.5
 	EndMethod
 EndType
 
@@ -2715,7 +2952,7 @@ EndType
 
 Type tShipToRockHandler Extends tCollisionHandler
 	Method invoke(collisionData:tCollisionData)
-		DebugLog "ShipToRock handler"
+		Throw "ShipToRock handler"
 	EndMethod
 EndType
 
@@ -2746,16 +2983,22 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 		' if the little alien was shot then drop the upgrade ship or a neutron bomb :)
 		If alien = game._alienlittle
 			If Not game._powerUp
-				If game._ship = game._shipbasic
-					Local powerup:tobject = game._shipPowerUp
-					powerUp.setParent(game._scene)
-					powerUp.moveTo(alien._posx, alien._posy, alien._posz)
-					Local anim:tRotationAnimator = New tRotationAnimator
-					anim.init(0.0, -1.0, 0.0)
-					powerUp.addAnimator(anim)
+				Local powerup:tobject
 				
-					game._powerUp = powerup
+				' prioritise getting the upgraded ship before the bomb
+				If game._ship = game._shipbasic
+					powerup = game._shipPowerUp
+				Else
+					' give the bomb upgrade
 				EndIf
+				
+				powerUp.setParent(game._scene)
+				powerUp.moveTo(alien._posx, alien._posy, alien._posz)
+				Local anim:tRotationAnimator = New tRotationAnimator
+				anim.init(0.0, -1.0, 0.0)
+				powerUp.addAnimator(anim)
+
+				game._powerUp = powerup
 			EndIf
 		EndIf
 		
@@ -2786,7 +3029,7 @@ EndType
 
 Type tAlienBulletToShipHandler Extends tCollisionHandler
 	Method invoke(collisionData:tCollisionData)
-		DebugLog "tAlienBulletToShipHandler"
+		Throw "tAlienBulletToShipHandler"
 	EndMethod
 EndType
 
@@ -2813,28 +3056,28 @@ EndType
 
 Type tAlienShipToRockHandler Extends tCollisionHandler
 	Method invoke(collisionData:tCollisionData)
-		'Local alien:tobject = collisionData._src
-		'Local rock:tobjectrock = tobjectrock(collisionData._dst)
+		Local alien:tobject = collisionData._src
+		Local rock:tobjectrock = tobjectrock(collisionData._dst)
 
-		'Local root:tobject = alien.getRoot()
-		'If Not root Return
+		Local root:tobject = alien.getRoot()
+		If Not root Return
 		
-		'Local game:tgame = tgame(root._extra)
-		'game.destroyRock(rock, collisionData._timeMs)
+		' split or remove the rock
+		Local game:tgame = tgame(root._extra)
+		game.destroyRock(rock, collisionData._timeMs)
 		
-		' alien could have shot the last rock?
-		'If game._rocksTodestroy = 0
-		'	Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
-		'	leaveLevel.init(collisionData._timeMs)
-		'	game._scene.addanimator(leaveLevel)
-		'Else
-			' reset the time for alien to appear
-		'	For Local anim:tanimator = EachIn root._animators
-		'		If tAlienShipControlAnimator(anim)
-		'			tAlienShipControlAnimator(anim).init(collisionData._timeMs, True)
-		'		EndIf
-		'	Next
-		'EndIf
+		' remove the alien
+		alien._animators.clear()
+		alien.setparent(Null)
+		game._alien = Null
+		game._alienShipController.init(collisionData._timeMs, True)
+		
+		' alien could have removed the last rock?
+		If game._rocksTodestroy = 0
+			Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
+			leaveLevel.init(collisionData._timeMs)
+			game._scene.addanimator(leaveLevel)
+		EndIf
 	EndMethod
 EndType
 
