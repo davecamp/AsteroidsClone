@@ -1,5 +1,7 @@
 Credits:
 
+All game code was made by me ( Dave Camp ) for the July 2017 SyntaxBomb indie coder competition.
+
 The following files are	
     " Official Asteroids sound samples for use in MAME v0.36b16 or earlier.
       All samples modified/enhanced by Gyrovision. "
@@ -24,5 +26,9 @@ The following files are
 The following files are
     " Created by Dave Camp using the excellent OpenMT available at https://openmpt.org "
 
-	intro.wav
+    intro.wav
 
+The following files are
+    " From an unknown source. If credit is due please contact me via 0xnullptr at gmail dot com "
+
+    bassdrop.wav

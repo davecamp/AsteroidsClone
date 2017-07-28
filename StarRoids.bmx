@@ -1,12 +1,6 @@
 
 Strict
 
-' ideas - big and small alien spaceship
-' 		  little ships give power-ups: double shot ship, triple shot ship,..
-'         4 way shot? smart bomb - will need shader to look good, hyperspace - hmm not sure
-
-' for high score table. move to other side of planet? spin the camera around?
-
 Import pub.win32
 Import srs.directx11
 
@@ -14,6 +8,32 @@ Const RENDERFLAG_SOLID:Int = 1
 Const RENDERFLAG_WIREFRAME:Int = 2
 
 Type tMeshData	
+	Method gameoverFrameWireframe:String()
+		Local mesh:String
+		mesh :+ "linestrip~n"
+		mesh :+ "v -1.0 -1.0 0.0~n"
+		mesh :+ "v -1.0 1.0 0.0~n"
+		mesh :+ "v 1.0 1.0 0.0~n"
+		mesh :+ "v 1.0 -1.0 0.0~n"
+		
+		mesh :+ "f 0 1 2 3 0"
+		Return mesh
+	EndMethod
+	
+	Method gameOverSolid:String()
+		Local mesh:String
+		mesh :+ "trianglelist~n"
+		mesh :+ "v -1.0 -1.0 0.0~n"
+		mesh :+ "v -1.0 1.0 0.0~n"
+		mesh :+ "v 1.0 1.0 0.0~n"
+		mesh :+ "v 1.0 -1.0 0.0~n"
+		
+		mesh :+ "f 0 1 2 0 2 3~n"
+		mesh :+ "f 0 2 1 0 3 2~n"
+		
+		Return mesh
+	EndMethod
+	
 	Method shipWireframe:String()
 		Local mesh:String
 		mesh :+ "linestrip~n"
@@ -112,7 +132,6 @@ Type tMeshData
 		
 		Return mesh
 	EndMethod
-
 
 	Method powerupShipSolid:String()
 		Local mesh:String
@@ -304,7 +323,6 @@ Type tMeshData
 		mesh :+ "v -1.5 1.9 -2.5~n"
 		mesh :+ "f 112 113 114 115 116 117 118 119"
 
-
 		Return mesh
 	EndMethod
 	
@@ -427,7 +445,7 @@ Type tMeshData
 		Return mesh
 	EndMethod
 	
-	Method powerupBombWireframeGUI:String()
+	Method bombWireframe:String()
 		Local mesh:String
 		mesh :+ "linelist~n"
 		mesh :+ "v -1.8 3.0 0.0~n"
@@ -1154,7 +1172,12 @@ Type tGame
 	Field _shipupgraded:tobject
 	Field _shipupgradedwire:tobject
 	Field _shipupgradedsolid:tobject
+	Field _shipIsInvincible:Int
+	Field _shipIsDestroyed:Int
 	
+	Field _livesLeft:Int
+	Field _bombCount:Int
+
 	Field _bombActive:Float
 	Field _bombTime:Float
 	Field _bombCentreX:Float
@@ -1163,10 +1186,8 @@ Type tGame
 	Field _powerUp:tobject 		' on screen power up
 	Field _shippowerup:tobject
 	Field _powerUpBomb:tObject
-
-	Field _bombCount:Int
 	
-	Field _alien:tobject 	' on screen alien
+	Field _alien:tobject 			' on screen alien
 	Field _alienbig:tobject
 	Field _alienLittle:tObject
 	Field _alienShipController:tAlienShipControlAnimator
@@ -1187,6 +1208,8 @@ Type tGame
 	
 	Field _score:Int
 	Field _scoreobject:tobject
+	Field _scoreMonitor:tScoreMonitorAnimator
+	Field _gameover:tobject
 	
 	Field _highscore:Int = 10000
 	Field _highscoreobject:tobject
@@ -1199,6 +1222,7 @@ Type tGame
 		
 	Field _bulletstore:TList
 	
+	Field _sampleDropBomb:TSound
 	Field _sampleUpgrade:TSound
 	Field _sampleShot:TSound
 	Field _sampleLife:TSound
@@ -1207,6 +1231,7 @@ Type tGame
 	Field _sampleThump:TSound[2]
 	Field _sampleAlienShot:TSound
 	Field _channelAlien:TChannel
+	Field _channelAlienShot:TChannel
 	
 	Field _sampleIntro:TSound
 	Field _channelIntro:TChannel
@@ -1247,6 +1272,13 @@ Type tGame
 		_scene = New tobject
 		_scene.setparent(_root)
 		_scene.setname("scene")
+		
+		_scoreMonitor = New tScoreMonitorAnimator
+		_scene.addAnimator(_scoreMonitor)
+		_scoreMonitor.init()
+		
+		Local volumeAnimator:tMusicVolumeAnimator = New tMusicVolumeAnimator
+		_scene.addAnimator(volumeAnimator)
 		
 		' gui
 		_gui = New tobject
@@ -1386,6 +1418,7 @@ Type tGame
 		' sounds
 		_sampleIntro = LoadSound("sounds/intro.wav", SOUND_LOOP)
 		
+		_sampleDropBomb = LoadSound("sounds/bassdrop.wav")
 		_sampleUpgrade = LoadSound("sounds/upgrade.wav")
 		_sampleShot = LoadSound("sounds/fire.wav")
 		_sampleLife = LoadSound("sounds/life.wav")
@@ -1395,7 +1428,7 @@ Type tGame
 		_sampleAlien[0] = LoadSound("sounds/lsaucer.wav", SOUND_LOOP)
 		_sampleAlien[1] = LoadSound("sounds/ssaucer.wav", SOUND_LOOP)
 		_sampleAlienShot = LoadSound("sounds/sfire.wav")
-		
+
 		' font
 		_font = New tFont
 		
@@ -1423,6 +1456,33 @@ Type tGame
 		Local titleObject:tobject = New tObject.Create(_pipeline._device, titleMesh, _title, RENDERFLAG_WIREFRAME)
 		titleObject.moveto( -Float(msg.length), -0.5, 0)
 		titleobject.setname("titleobject")
+		
+		' game over
+		_gameOver = New tObject
+		_gameOver.setParent(Null)
+
+		Local gameOverMesh:tmesh = _font.createsentence("game over")
+		gameOverMesh.scale(3.0, 2.0, 1.0)
+
+		Local gameOverFront:tobject = New tobject.Create(_pipeline._device, gameOverMesh, _gameOVer, RENDERFLAG_WIREFRAME)
+		gameOverFront.moveTo(-13.5, -0.8, -0.05)
+		
+		gameOverMesh.scale(1.0, -1.0, 1.0)
+		Local gameOverBack:tobject = New tobject.Create(_pipeline._device, gameOverMesh, _gameOVer, RENDERFLAG_WIREFRAME)
+		gameOverBack.moveTo(-13.5, 0.8, 0.05)
+
+		Local gameOverWireFrameMesh:tmesh = parsemeshdata(_meshdata.gameoverFrameWireframe(), 1.0)
+		gameOverWireframeMesh.scale(15.0, 3.0, 1.0)
+		Local gameOverSolidMesh:tmesh = parsemeshdata(_meshdata.gameoverSolid(), 1.0)
+		gameOverSolidMesh.scale(15.0, 3.0, 1.0)
+
+		Local gameOverFrameFront:tobject = New tobject.Create(_pipeline._device, gameOverWireFrameMesh, _gameOver, RENDERFLAG_WIREFRAME)
+		gameOverFrameFront.moveTo(0.0, 0.0, -0.05)
+		
+		Local gameOverFrameBack:tobject = New tobject.Create(_pipeline._device, gameOverWireFrameMesh, _gameOver, RENDERFLAG_WIREFRAME)
+		gameOverFrameBack.moveTo(0.0, 0.0, 0.05)
+		
+		Local gameOverFrameSolid:tobject = New tobject.Create(_pipeline._device, gameOverSolidMesh, _gameOver, RENDERFLAG_SOLID)
 		
 		' get ready
 		msg = "get ready"
@@ -1492,7 +1552,7 @@ Type tGame
 		pressToStartObject.moveto( -msg.length / 2.0, -0.5, 0)
 		pressToStartObject.setName("presstostartobject")
 
-		' create copyright for atari
+		' competition entry
 		_copyright = New tobject
 		_copyright.setparent(_gui)
 		_copyright.moveTo(0, -14, -5)
@@ -1563,11 +1623,16 @@ Type tGame
 		_powerupBomb.setName("bomb")
 		
 		' bomb display
-		Local bombDisplay:tmesh = parseMeshData(_meshdata.powerupBombWireframeGui(), 1.0)
+		Local bombDisplay:tmesh = parseMeshData(_meshdata.bombWireframe(), 1.0)
 		bombDisplay.scale(0.25, 0.3, 1.0)
 		Local bombGui:tobjectBombIndicator = New tobjectBombIndicator.Create(_pipeline._device, bombDisplay, _gui, RENDERFLAG_WIREFRAME)
 		bombGui.setName("bombDisplay")
 		bombGui.setBombCountPointer(Varptr _bombCount)
+		
+		' lives left display
+		Local  shipDisplay:tobjectLiveLeftIndicator = New tobjectLiveLeftIndicator.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
+		shipDisplay.setName("livesDisplay")
+		shipDisplay.setLiveLeftCounterPtr(Varptr _livesLeft)
 		
 		' alien big ship
 		Local alienmesh:tmesh = parseMeshData(_meshdata.alienbigwireframe(), 1.0)
@@ -1874,6 +1939,8 @@ Type tGame
 	EndMethod
 	
 	Method beginGameLevel()
+		_shipIsDestroyed = False
+		_shipIsInvincible = False
 		_rocksToDestroy = 0
 
 		Local velMin:Float = 0.02 + ((_currentWave + 1) / 200.0)
@@ -2258,10 +2325,18 @@ Type tobject
 	
 	Method setColourWireframe(r:Float, g:Float, b:Float, a:Float)
 		_colourWireframe[0] = r; _colourWireframe[1] = g; _colourWireframe[2] = b; _colourWireframe[3] = a
+		
+		For Local obj:tObject = EachIn _children
+			obj.setColourWireframe(r, g, b, a)
+		Next
 	EndMethod
 	
 	Method setColourSolid(r:Float, g:Float, b:Float, a:Float)
 		_colourSolid[0] = r; _colourSolid[1] = g; _colourSolid[2] = b; _colourSolid[3] = a
+		
+		For Local obj:tObject = EachIn _children
+			obj.setColourSolid(r, g, b, a)
+		Next
 	EndMethod
 
 	
@@ -2474,8 +2549,87 @@ Type tobjectBombIndicator Extends tobject
 	EndMethod
 EndType
 
+Type tobjectLiveLeftIndicator Extends tobject
+	Field _livesCounterPtr:Int Ptr
+	Field _livesbasic:tobject[4]
+	
+	Method Create:tobjectLiveLeftIndicator(device:ID3D11Device, mesh:tmesh, parent:tobject, renderFlag:Int)
+		setparent(parent)
+
+		Local root:tObject = tObject(parent.getRoot())
+		If Not root Return
+
+		Local game:tGame = tGame(root._extra)
+		Local meshData:tMeshData = tMeshData(game._meshData)
+		
+		Local shipBasic:String = meshData.shipWireframe()
+		For Local i = 0 Until 4
+			_livesbasic[3 - i] = New tobject.Create(device, game.parseMeshData(shipBasic, 1.0), Self, renderflag)
+			_livesbasic[3 - i].moveTo(-24.2 + (i * 1.25), 12.2, 0.0)
+			_livesbasic[3 - i].setName("lives")
+		Next
+		Return Self
+	EndMethod
+	
+	Method setLiveLeftCounterPtr(livesCounterPtr:Int Ptr)
+		_livesCounterPtr = livesCounterPtr
+	EndMethod
+	
+	Method renderWireframe(context:ID3D11DeviceContext)
+		If _livesCounterPtr
+			Local livesLeft:Int = _livesCounterPtr[0]
+			For Local i:Int = 0 Until livesLeft
+				_livesbasic[i].renderWireframe(context)
+			Next
+		EndIf
+	EndMethod
+EndType
+	
 Type tanimator
 	Method animate(obj:tobject, timeMs:Int) Abstract
+EndType
+
+Type tMusicVolumeAnimator Extends tAnimator
+	Field _volume:Float = 1.0
+	Method animate(obj:tObject, timeMs:Int)
+		Local root:tobject = obj.getRoot()
+		If Not root Return
+
+		Local game:tGame = tGame(root._extra)
+
+		If KeyHit(KEY_Q)
+			_volume = Min(_volume + 0.1, 1.0)
+			SetChannelVolume(game._channelIntro, _volume)
+		EndIf
+		If KeyHit(KEY_W)
+			_volume = Max(0.0, _volume - 0.1)
+			SetChannelVolume(game._channelIntro, _volume)
+		EndIf
+	EndMethod
+EndType
+
+Type tScoreMonitorAnimator Extends tAnimator
+	Field _score:Int
+
+	Method init()
+		_score = 0
+	EndMethod
+		
+	Method animate(obj:tObject, timeMs:Int)
+		Local root:tobject = obj.getRoot()
+		If Not root Return
+
+		Local game:tGame = tGame(root._extra)
+
+		Local score:Int =  game._score / 10000
+		If score > _score
+			_score = score
+			game._livesLeft = Min(game._livesLeft + 1, 4)
+			PlaySound(game._sampleLife)
+		EndIf
+		
+		If game._score > game._highScore game._highscore = game._score
+	EndMethod
 EndType
 
 Type tIntroAnimator Extends tAnimator
@@ -2489,20 +2643,216 @@ Type tIntroAnimator Extends tAnimator
 		
 		If KeyDown(KEY_SPACE)
 			FlushKeys()
-					
+			
+			game._scoreMonitor.init()
+
+			game._score = 0
+			game._livesLeft = 2
 			game._gamestate = 1
+			game._shipIsDestroyed = False
+			game._bombCount = 0
 			
 			game._pressToStart.setParent(Null)
 			game._title.setparent(Null)
 			game._currentWave = 1
 
 			game._ship = game._shipbasic
+			game._shipIsInvincible = False
 			game._powerup = Null
 			game._alien = Null
 			
 			Local begin:tBeginLevelAnimator = New tBeginLevelAnimator
 			begin.init(timeMs)
 			game._scene.addAnimator(begin)
+		EndIf
+	EndMethod
+EndType
+
+Type tGameOverAnimator Extends tAnimator
+	Field _initTimeMs:Int
+	Field _state:Int = 0
+	Field _corex:Float, _corey:Float, _corez:Float
+	
+	Method init(corex:Float, corey:Float, corez:Float, initTimeMs:Int)
+		_initTimeMs = initTimeMs
+		_corex = corex
+		_corey = corey
+		_corez = corez					
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		Local root:tobject = obj.getRoot()
+		If Not root Return ' if this isnt valid something serious gone wrong!
+
+		Local game:tGame = tGame(root._extra)
+		
+		Select _state
+		Case 0 fadeOutGameArea(game, timeMs)
+		Case 1 fadeInGameOver(game, timeMs)
+		Case 2 fadeOutGameOver(game, timeMs)
+		EndSelect
+	EndMethod
+	
+	Method resetGame(game:tGame)
+		game._pressToStart.setParent(game._scene)
+		game._title.setParent(game._scene)
+
+		game._gameOver.setParent(Null)
+		game._gameOver._animators.clear()
+		game._gameOver.rotateTo(0.0, 0.0, 0.0)
+		game._scene.removeAnimator(Self)
+	EndMethod
+	
+	Method fadeInGameOver(game:tGame, timeMs)
+		Local deltaTimeMs:Int = timeMs - _initTimeMs
+		If deltaTimeMs < 5000
+			Local delta:Float = (1.0 / 5000.0) * deltaTimeMs
+			Local rotx:Float = math.lerp(90.0, 720.0, delta)
+			Local posz:Float = math.lerp(120.0, 0.0, delta)
+			
+			game._gameOver.moveTo(0.0, 0.0, posz)
+			game._gameOver.rotateTo(rotx, 0.0, 0.0)
+			
+			If deltaTimeMs > 1000 And GetChar() <> 0
+				game._gameOver.moveTo(0.0, 0.0, 0.0)
+				game._gameOver.rotateTo(720.0, 0.0, 0.0)
+				_initTimeMs = timeMs
+				_state = 2
+			EndIf
+		Else If deltaTimeMs > 20000
+			_initTimeMs = timeMs
+			_state = 2
+		
+		Else
+			game._gameOver.rotateTo(720.0, 0.0, 0.0)
+			If GetChar()
+				_initTimeMs = timeMs
+				_state = 2
+			EndIf
+		EndIf
+	EndMethod
+	
+	Method fadeoutGameOver(game:tGame, timeMs)
+		Local deltaTimeMs:Int = timeMs - _initTimeMs
+		If deltaTimeMs < 5000
+			Local delta:Float = (1.0 / 5000.0) * deltaTimeMs
+			Local rotx:Float = math.lerp(720.0, 90.0, delta)
+			Local posz:Float = math.lerp(0.0, 120.0, delta)
+			
+			game._gameOver.moveTo(0.0, 0.0, posz)
+			game._gameOver.rotateTo(rotx, 0.0, 0.0)
+
+			If deltaTimeMs > 1000 And GetChar() <> 0
+				resetGame(game)
+			EndIf
+		Else
+			resetGame(game)
+		EndIf
+	EndMethod
+	
+	Method fadeOutGameArea(game:tGame, timeMs:Int)
+		If game._powerUp game._powerUp = Null
+		game._shipPowerUp._animators.clear()
+		game._shipPowerUp.setparent(Null)
+		game._powerUpBomb._animators.clear()
+		game._powerUpBomb.setparent(Null)
+		
+	
+		' after fade out time all colours are restored
+		Local deltaTimeMs:Int = timeMs - _initTimeMs
+
+		If deltaTimeMs < 3000
+			Local value:Float = 1.0 - ((1.0 / 3000.0) * deltaTimeMs)
+			
+			' fade out the alien
+			If game._channelAlien SetChannelVolume(game._channelAlien, value)
+			If game._channelAlienShot SetChannelVolume(game._channelAlienShot, value)
+			
+			For Local obj:tobject = EachIn game._scene._children
+				If game._alien game._alien.setcolourWireframe(value, value, value, 1.0)
+				
+				' not good code to deal with the alien bullet
+				Local alienBullet:tObject
+				For Local anim:tAnimator = EachIn obj._animators
+					If tAlienBulletAnimator(anim) alienBullet = obj
+				Next
+				If alienBullet alienBullet.setColourWireframe(value, value, value, 1.0)
+	
+				' fade all rocks
+				If tObjectRock(obj)
+					Local solidColour:Float = obj._colourSolid[0]
+					Local solid:Float = solidColour * value
+					obj.setColourSolid(solid, solid, solid, 1.0)
+					obj.setColourWireframe(value, value, value, 1.0)
+				EndIf
+			Next
+
+			' zoom away from the planet
+			Local destx:Float = 0.0
+			Local desty:Float = 10.0
+			Local destz:Float = 160.0
+			
+			' value is moving from 1.0 to 0.0 for fading so lets reverse that - abuse the lerp function
+			Local x:Float = math.lerp(_corex, destx, 1.0 - value)
+			Local y:Float = math.lerp(_corey, desty, 1.0 - value)
+			Local z:Float = math.lerp(_corez, destz, 1.0 - value)
+			game._planetcore.moveTo(x, y, z)
+
+		Else
+			game._planetcore.moveTo(0.0, 10.0, 160.0)
+
+			' remove any alien
+			If game._channelAlien StopChannel(game._channelAlien)		
+			If game._alien
+				game._alien._animators.clear()
+				game._alien.setparent(Null)
+				game._alien = Null
+			EndIf
+			game._alienShipController.init(timeMs, False)
+			game._alienLittle.setColourWireframe(1.0, 1.0, 1.0, 1.0)
+			game._alienBig.setColourWireframe(1.0, 1.0, 1.0, 1.0)
+
+			For Local obj:tobject = EachIn game._scene._children
+				' remove any alien bullet
+				' uggh nasty way to deal with this :/ - remove the alien bullet when the bomb goes off
+				Local alienBullet:tObject
+				For Local anim:tAnimator = EachIn obj._animators
+					If tAlienBulletAnimator(anim) alienBullet = obj
+				Next
+				If alienBullet
+					game._alienBullet = alienBullet
+					alienBullet.setparent(Null)
+					alienBullet._animators.clear()
+				EndIf
+				If game._alienBullet game._alienBullet.setcolourWireframe(1.0, 1.0, 1.0, 1.0)
+		
+				' reset all rocks
+				If tObjectRock(obj)
+					obj._animators.clear()
+					game._rockstore.addlast(obj)
+					obj.setparent(Null)
+					game._rocksToDestroy = 0
+				EndIf
+			Next
+
+			For Local obj:tobject = EachIn game._rockstore
+				obj.setcolourWireframe(1.0, 1.0, 1.0, 1.0)
+				obj.setcolourSolid(0.12, 0.12, 0.12, 1.0)
+			Next
+	
+			game._shipUpgraded.setcolourwireframe(1.0, 1.0, 1.0, 1.0)
+			game._shipUpgraded.setparent(Null)
+		
+			game._shipbasic.setcolourwireframe(1.0, 1.0, 1.0, 1.0)
+			game._shipbasic.setParent(Null)			
+
+			' fade in the game over board
+			_initTimeMs = timeMs
+			_state = 1
+			
+			game._gameOver.moveto(0.0, 0.0, 120.0)
+			game._gameOver.rotateTo(90.0, 0.0, 0.0)
+			game._gameOver.setparent(game._scene)
 		EndIf
 	EndMethod
 EndType
@@ -2754,27 +3104,33 @@ Type tShipAnimator Extends tanimator
 		If Not root Return
 
 		Local game:tgame = tgame(root._extra)
-			
+		
 		Local st:Float = 5
-		If KeyDown(KEY_LEFT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz - st)
-		If KeyDown(KEY_RIGHT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz + st)
+		If Not game._shipIsDestroyed
+			If KeyDown(KEY_LEFT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz - st)
+			If KeyDown(KEY_RIGHT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz + st)
 	
-		If KeyHit(KEY_DOWN) And game._bombCount > 0
-			Local bombAnim:tBombBlastAnimator = New tBombBlastAnimator
-			bombAnim.init(obj._posx, obj._posy, obj._posz)
-			game._scene.addAnimator(bombAnim)
-			game._bombCount :- 1
-		EndIf
+			If KeyHit(KEY_DOWN) And game._bombCount > 0
+				Local bombAnim:tBombBlastAnimator = New tBombBlastAnimator
+				bombAnim.init(obj._posx, obj._posy, obj._posz)
+				game._scene.addAnimator(bombAnim)
+				game._bombCount :- 1
+				
+				PlaySound(game._sampleDropBomb)
+			EndIf
 
-		' adjust some thrust
-		If KeyDown(KEY_UP)
-			_velx :+ 0.01 * Sin(obj._rotz)
-			_vely :+ 0.01 * Cos(obj._rotz)
-
-			_velx = Max(-0.6, Min(_velx, 0.6))
-			_vely = Max(-0.6, Min(_vely, 0.6))
-			
-			'PlaySound(game._sampleThrust)
+			' adjust some thrust
+			If KeyDown(KEY_UP)
+				_velx :+ 0.01 * Sin(obj._rotz)
+				_vely :+ 0.01 * Cos(obj._rotz)
+	
+				_velx = Max(-0.6, Min(_velx, 0.6))
+				_vely = Max(-0.6, Min(_vely, 0.6))
+				
+				'PlaySound(game._sampleThrust)
+			EndIf
+		Else
+			FlushKeys()
 		EndIf
 		
 		Local posx:Float = obj._posx
@@ -2788,7 +3144,7 @@ Type tShipAnimator Extends tanimator
 		If posx > 29.0 posx = -29.0
 		obj.moveTo(posx, posy, posz)
 
-		If KeyHit(KEY_SPACE)
+		If KeyHit(KEY_SPACE) And Not game._shipIsDestroyed
 			Local bullet:tobject = tobject(game._bulletstore.removefirst())
 			If Not bullet Return
 			
@@ -3106,7 +3462,7 @@ Type tAlienShipControlAnimator Extends tAnimator
 					bullet.addAnimator(rot)
 					
 					' get a varied vector to the player
-					Local accuracy:Float = 20.0 / game._currentWave
+					Local accuracy:Float = 20.0 ' / game._currentWave 
 					Local dirx:Float = game._ship._posx + Rnd(-accuracy, accuracy) - game._alien._posx
 					Local diry:Float = game._ship._posy + Rnd(-accuracy, accuracy) - game._alien._posy
 					
@@ -3121,7 +3477,7 @@ Type tAlienShipControlAnimator Extends tAnimator
 					bullet.addAnimator(anim)
 					
 					_lastShotMs = timeMs
-					PlaySound(game._sampleAlienShot)
+					game._channelAlienShot = PlaySound(game._sampleAlienShot)
 				EndIf
 				
 				' after 2 seconds change direction
@@ -3270,6 +3626,127 @@ Type tBombBlastAnimator Extends tAnimator
 	EndMethod
 EndType
 
+Type tShipExplodeAnimator Extends tAnimator
+	Field _initTimeMs:Int
+	Field _doneExplosion:Int
+	Field _posx:Float, _posy:Float, _posz:Float
+	
+	Method init(ship:tobject, initTimeMs:Int)
+		Local root:tobject = ship.getRoot()
+		If Not root Return
+
+		Local game:tGame = tGame(root._extra)
+
+		game._shipIsInvincible = True
+		ship.setColourWireframe(0.0, 0.0, 0.0, 1.0)
+		
+		_posx = ship._posx
+		_posy = ship._posy
+		_posz = ship._posz
+		
+		_initTimeMs = initTimeMs
+	EndMethod
+	
+	Method animate(obj:tobject, timeMs:Int)
+		Local root:tobject = obj.getRoot()
+		If Not root Return
+
+		Local game:tGame = tGame(root._extra)
+		game._shipIsDestroyed = True
+
+		If Not _doneExplosion
+			PlaySound(game._sampleRocks[0])
+
+			createExplosion(game, _posx, _posy, _posz, 64, 0.2, timeMs, 1500)
+			_doneExplosion = True
+		Else
+			
+			If timeMs > _initTimeMs + 3000
+				obj.removeAnimator(Self)
+				
+				' reset to centre of game area and stop ship moving
+				obj.moveTo(0.0, 0.0, 0.0)
+				obj.rotateTo(0.0, 0.0, 0.0)
+				
+				game._shipIsDestroyed = False
+				
+				For Local anim:tAnimator = EachIn obj._animators
+					Local shipAnim:tShipAnimator = tShipAnimator(anim)
+					If shipAnim
+						shipAnim._velx = 0.0
+						shipAnim._vely = 0.0
+						shipAnim._velz = 0.0
+					EndIf
+				Next
+
+				Local newanim:tShipRespawnAnimator = New tShipRespawnAnimator
+				newanim.init(timeMs, 2500)
+				obj.addAnimator(newanim)
+			EndIf
+		EndIf
+	EndMethod
+	
+	Method createExplosion(game:tGame, posx:Float, posy:Float, posz:Float, particleCount:Int, vel:Float, spawnTimeMs:Int, lifeTimeMs:Int)
+		Local epicentre:tobject = New tobject
+		epicentre.setparent(game._scene)
+			
+		For Local i:Int = 0 Until particleCount
+			Local particleanim:tParticleAnimator = New tParticleAnimator
+			particleanim.init(Rnd(-vel, vel), Rnd(-vel, vel), Rnd(-vel, vel), 0.0, 0.0, 0.0, spawnTimeMs, lifeTimeMs)
+
+			Local particle:tobject = tobject(game._particlestore.removefirst())
+			If particle
+				particle.setParent(game._scene)
+				particle.moveTo(posx, posy, posz)
+				particle.addAnimator(particleanim)
+			EndIf
+		Next
+	EndMethod
+EndType
+
+Type tShipRespawnAnimator Extends tAnimator
+	Field _initTimeMs:Int
+	Field _lifeTimeMs:Int
+	Field _firstTimeThru:Int
+
+	Method init(initTimeMs:Int, lifeTimeMs:Int)
+		_initTimeMs = initTimeMs
+		_lifeTimeMs = lifeTimeMs
+	EndMethod
+
+	Method animate(obj:tObject, timeMs:Int)
+		Local root:tObject = obj.getRoot()
+		If Not root Return
+		Local game:tGame = tGame(root._extra)
+		
+		' delay removing a life from the display until we're actually going to use it - requires a flag
+		If Not _firstTimeThru
+			game._livesLeft :- 1
+			_firstTimeThru = True
+		EndIf
+		
+		If game._livesLeft = -1
+			obj.removeAnimator(Self)
+			obj.setParent(Null)
+			
+			' show game over!
+			Local anim:tGameOverAnimator = New tGameOverAnimator
+			anim.init(game._planetcore._posx, game._planetcore._posy, game._planetcore._posz, timeMs)
+			game._scene.addAnimator(anim)
+		EndIf
+
+		If timeMs > _initTimeMs + _lifeTimeMs
+			game._shipIsInvincible = False
+			game._ship.removeAnimator(Self)
+			
+			obj.setColourWireframe(1.0, 1.0, 1.0, 1.0)
+		Else
+			Local colour:Float = Sin((MilliSecs() Mod 360))
+			obj.setColourWireframe(colour, colour, colour, 1.0)
+		EndIf
+	EndMethod
+EndType
+	
 Type tCollisionHandler
 	Method invoke(collisionData:tCollisionData) Abstract
 EndType
@@ -3309,7 +3786,31 @@ EndType
 
 Type tShipToRockHandler Extends tCollisionHandler
 	Method invoke(collisionData:tCollisionData)
-		DebugLog "ShipToRock handler"
+		Local ship:tobject = collisionData._src
+		Local root:tobject = ship.getRoot()
+		If Not root Return
+		
+		Local game:tGame = tGame(root._extra)
+		If game._shipIsInvincible Return
+
+		Local anim:tShipExplodeAnimator = New tShipExplodeAnimator
+		anim.init(ship, collisionData._timeMs)		
+		ship.addAnimator(anim)
+	EndMethod
+EndType
+
+Type tAlienBulletToShipHandler Extends tCollisionHandler
+	Method invoke(collisionData:tCollisionData)
+		Local ship:tObject = collisionData._dst
+		Local root:tObject = ship.getRoot()
+		If Not root Return
+	
+		Local game:tGame = tGame(root._extra)
+		If game._shipIsInvincible Return
+	
+		Local anim:tShipExplodeAnimator = New tShipExplodeAnimator
+		anim.init(ship, collisionData._timeMs)
+		ship.addAnimator(anim)
 	EndMethod
 EndType
 
@@ -3336,6 +3837,7 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 		alien.setparent(Null)
 		game._alien = Null
 		game._alienShipController.init(collisionData._timeMs, True)
+
 		
 		' if the little alien was shot then drop the upgrade ship or a neutron bomb :)
 		If alien = game._alienlittle
@@ -3383,12 +3885,6 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 				particle.addAnimator(particleanim)
 			EndIf
 		Next
-	EndMethod
-EndType
-
-Type tAlienBulletToShipHandler Extends tCollisionHandler
-	Method invoke(collisionData:tCollisionData)
-		DebugLog "tAlienBulletToShipHandler"
 	EndMethod
 EndType
 
