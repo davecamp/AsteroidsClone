@@ -975,6 +975,7 @@ Type tGame
 	
 	Field _root:tobject
 	Field _scene:tobject
+	Field _gui:tobject
 
 	Field _meshdata:tMeshData
 
@@ -1077,6 +1078,11 @@ Type tGame
 		_scene = New tobject
 		_scene.setparent(_root)
 		_scene.setname("scene")
+		
+		' gui
+		_gui = New tobject
+		_gui.setparent(_root)
+		_gui.setname("gui")
 
 		_window = New TWindow.Create(Width, Height)
 		_pipeline = New TGpuD3D11.Create(Width, Height, _window.getWindowHandle())
@@ -1225,11 +1231,11 @@ Type tGame
 		_font = New tFont
 		
 		' score
-		_scoreobject = New tobjectscore.Create(_pipeline._device, Null, _scene, RENDERFLAG_WIREFRAME)
+		_scoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
 		_scoreobject.moveTo(-21, 13, -5)
 		tobjectscore(_scoreobject).setscorepointer(Varptr _score)
 
-		_highscoreobject = New tobjectscore.Create(_pipeline._device, Null, _scene, RENDERFLAG_WIREFRAME)
+		_highscoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
 		_highscoreobject.moveTo(0, 13, -5)
 		tobjectscore(_highscoreobject).setscorepointer(Varptr _highscore)
 		
@@ -1317,7 +1323,7 @@ Type tGame
 
 		' create copyright for atari
 		_copyright = New tobject
-		_copyright.setparent(_scene)
+		_copyright.setparent(_gui)
 		_copyright.moveTo(0, -14, -5)
 		_copyright.setname("copyright")
 		
@@ -1776,7 +1782,6 @@ Type tGame
 
 	Method updategamelogic(timeMs:Int)
 		If KeyDown(KEY_ESCAPE) _gamestate = -1
-
 		_root.update(timeMs)
 	EndMethod
 
@@ -1796,16 +1801,30 @@ Type tGame
 			_pipeline._context.Unmap(_vsConstants, 0)
 
 			renderscene()
-
-			' need to quad shader, set the texture for the quad, render quad to backbuffer
 			renderQuadToBackBuffer()
-
+			
+			renderGUI()
 			_pipeline.Present(True)
 	EndMethod
 	
+	Method renderGUI()
+		_pipeline.turnOffDepthTesting()
+		_pipeline.setWireframeOn()
+		_pipeline.setBackBuffer()
+		_pipeline._context.IASetInputLayout(_inputLayout)
+		_pipeline._context.VSSetConstantBuffers(0, 1, Varptr _vsConstants)
+		_pipeline._context.VSSetShader(_vertexShader, Null, 0)
+		_pipeline._context.PSSetShader(_pixelShader, Null, 0)
+		_pipeline._context.PSSetConstantBuffers(0, 1, Varptr _psConstants)
+
+		_gui.renderWireframe(_pipeline._context)
+	EndMethod
+	
 	Method prepareToRenderToQuad()
+		_pipeline.turnOnDepthTesting()
+
 		Local colour:Float[0.0, 0.0, 0.0, 1.0]
-		
+
 		_pipeline._context.OMSetRenderTargets(1, Varptr _quadRendertargetView, _pipeline._depthstencilView)
 		_pipeline._context.clearDepthStencilView(_pipeline._depthstencilView, D3D11_CLEAR_DEPTH, 1.0, 0)
 		_pipeline._context.clearRendertargetView(_quadRendertargetView, colour)
@@ -1841,6 +1860,9 @@ Type tGame
 		_pipeline._context.PSSetSamplers(0, 1, Varptr _quadSampler)
 		
 		_pipeline._context.draw(6, 0)
+		
+		Local nulltarget:ID3D11RendertargetView
+		_pipeline._context.PSSetShaderResources(0, 1, Varptr nulltarget)
 	EndMethod
 	
 	Method renderscene()
@@ -2326,13 +2348,13 @@ Type tBeginLevelAnimator Extends tAnimator
 			Local delta:Float = Sqr(distx * distx + disty * disty + distz * distz)
 			If delta < 0.1
 				game._ship.setparent(game._scene)	
-				game._getready.setparent(game._scene)
+				game._getready.setparent(game._gui)
 				_initTimeMs = timeMs
 				_state = 1
 			EndIf
 		
 		Else If _state = 1
-			If timeMs > _initTimeMs + 1000
+			If timeMs > _initTimeMs + 1400
 				game._getready.setparent(Null)
 				game._scene.removeAnimator(Self)
 				game.beginGamelevel()
@@ -2369,7 +2391,7 @@ Type tLeaveLevelAnimator Extends tAnimator
 		EndIf
 
 		If _state = 0
-			If timeMs > _initTimeMs + 1500			
+			If timeMs > _initTimeMs + 1000			
 				Local core:tobject = game._planetcore
 				Local x:Float = core._posx
 				Local y:Float = core._posy
@@ -2393,19 +2415,19 @@ Type tLeaveLevelAnimator Extends tAnimator
 				If delta < 0.1
 					core.moveTo(0.0, 10.0, 160.0)
 	
-					game._waveComplete.setparent(game._scene)
+					game._waveComplete.setparent(game._gui)
 					_initTimeMs = timeMs
 					_state = 1
 				EndIf
 			EndIf
 		
 		Else If _state = 1
-			If timeMs > _initTimeMs + 1000
+			If timeMs > _initTimeMs + 600
 				game._scene.removeanimator(Self)
 
 				Local anim:twavecompleteanimator = New twavecompleteanimator
 				anim.init(timeMs)
-				game._waveComplete.setparent(game._scene)
+				game._waveComplete.setparent(game._gui)
 				game._scene.addAnimator(anim)
 			EndIf
 		EndIf
@@ -3067,7 +3089,7 @@ Type tAlienBulletToRockHandler Extends tCollisionHandler
 		Local rock:tobjectrock = tobjectRock(collisionData._dst)
 		Local root:tObject = rock.getRoot()
 		If Not root Return
-		
+
 		Local game:tgame = tgame(root._extra)
 		game.destroyRock(rock, collisionData._timeMs)
 		
@@ -3080,6 +3102,8 @@ Type tAlienBulletToRockHandler Extends tCollisionHandler
 
 		Local bullet:tobject = collisionData._src
 		game._alienBullet = bullet
+		bullet.setparent(Null)
+		bullet._animators.clear()
 	EndMethod
 EndType
 
