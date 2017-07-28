@@ -3043,13 +3043,15 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 					' give the bomb upgrade
 				EndIf
 				
-				powerUp.setParent(game._scene)
-				powerUp.moveTo(alien._posx, alien._posy, alien._posz)
-				Local anim:tRotationAnimator = New tRotationAnimator
-				anim.init(0.0, -1.0, 0.0)
-				powerUp.addAnimator(anim)
+				If powerUp
+					powerUp.setParent(game._scene)
+					powerUp.moveTo(alien._posx, alien._posy, alien._posz)
+					Local anim:tRotationAnimator = New tRotationAnimator
+					anim.init(0.0, -1.0, 0.0)
+					powerUp.addAnimator(anim)
 
-				game._powerUp = powerup
+					game._powerUp = powerup
+				EndIf
 			EndIf
 		EndIf
 		
