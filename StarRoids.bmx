@@ -137,16 +137,16 @@ Type tMeshData
 	EndMethod
 
 	Method powerupShipWireframe:String()
-		Local mesh:String
+		Local mesh:String 
 		mesh :+ "linelist~n"
-		mesh :+ "v -2.5 -2.5 -2.5~n"
-		mesh :+ "v -2.5 2.5 -2.5~n"
-		mesh :+ "v 2.5 2.5 -2.5~n"
-		mesh :+ "v 2.5 -2.5 -2.5~n"
-		mesh :+ "v -2.5 -2.5 2.5~n"
-		mesh :+ "v -2.5 2.5 2.5~n"
-		mesh :+ "v 2.5 2.5 2.5~n"
-		mesh :+ "v 2.5 -2.5 2.5~n"
+		mesh :+ "v -3.0 -3.0 -3.0~n"
+		mesh :+ "v -3.0 3.0 -3.0~n"
+		mesh :+ "v 3.0 3.0 -3.0~n"
+		mesh :+ "v 3.0 -3.0 -3.0~n"
+		mesh :+ "v -3.0 -3.0 3.0~n"
+		mesh :+ "v -3.0 3.0 3.0~n"
+		mesh :+ "v 3.0 3.0 3.0~n"
+		mesh :+ "v 3.0 -3.0 3.0~n"
 		mesh :+ "f 0 1 1 2 2 3 3 0 -1~n"
 		mesh :+ "f 3 2 2 6 6 7 7 3 -1~n"
 		mesh :+ "f 4 5 5 6 6 7 7 4 -1~n"
@@ -308,8 +308,175 @@ Type tMeshData
 		Return mesh
 	EndMethod
 	
-	Method galacticBomb:String()
+	Method powerupBombWireframe:String()
 		Local mesh:String
+		mesh :+ "linelist~n"
+		mesh :+ "v -1.8 3.0 -2.5~n"
+		mesh :+ "v 1.8 3.0 -2.5~n"
+		mesh :+ "v 1.8 1.0 -2.5~n"
+		mesh :+ "v -1.8 1.0 -2.5~n"
+		mesh :+ "v -1.0 1.0 -2.5~n"
+		mesh :+ "v 1.0 1.0 -2.5~n"
+		mesh :+ "v 2.0 0.0 -2.5~n"
+		mesh :+ "v 2.0 -2.0 -2.5~n"
+		mesh :+ "v 1.0 -3.0 -2.5~n"
+		mesh :+ "v -1.0 -3.0 -2.5~n"
+		mesh :+ "v -2.0 -2.0 -2.5~n"
+		mesh :+ "v -2.0 0.0 -2.5~n"
+		
+		mesh :+ "v -1 0.4 -2.5~n"
+		mesh :+ "v -0.4 -0.4 -2.5~n"
+		mesh :+ "v 1 0.4 -2.5~n"
+		mesh :+ "v 0.4 -0.4 -2.5~n"
+		mesh :+ "v -1.0 -2.0 -2.5~n"
+		mesh :+ "v -0.4 -1.2 -2.5~n"
+		mesh :+ "v 1.0 -2.0 -2.5~n"
+		mesh :+ "v 0.4 -1.2 -2.5~n"
+		
+		mesh :+ "f 0 1 1 2 2 5 5 6 6 7 7 8 8 9 9 10 10 11 11 4 4 3 3 0~n"
+		mesh :+ "f 12 13 14 15 16 17 18 19~n"
+
+		mesh :+ "v -1.8 3.0 2.5~n"
+		mesh :+ "v 1.8 3.0 2.5~n"
+		mesh :+ "v 1.8 1.0 2.5~n"
+		mesh :+ "v -1.8 1.0 2.5~n"
+		mesh :+ "v -1.0 1.0 2.5~n"
+		mesh :+ "v 1.0 1.0 2.5~n"
+		mesh :+ "v 2.0 0.0 2.5~n"
+		mesh :+ "v 2.0 -2.0 2.5~n"
+		mesh :+ "v 1.0 -3.0 2.5~n"
+		mesh :+ "v -1.0 -3.0 2.5~n"
+		mesh :+ "v -2.0 -2.0 2.5~n"
+		mesh :+ "v -2.0 0.0 2.5~n"
+		
+		mesh :+ "v -1 0.4 2.5~n"
+		mesh :+ "v -0.4 -0.4 2.5~n"
+		mesh :+ "v 1 0.4 2.5~n"
+		mesh :+ "v 0.4 -0.4 2.5~n"
+		mesh :+ "v -1.0 -2.0 2.5~n"
+		mesh :+ "v -0.4 -1.2 2.5~n"
+		mesh :+ "v 1.0 -2.0 2.5~n"
+		mesh :+ "v 0.4 -1.2 2.5~n"
+		
+		mesh :+ "f 20 21 21 22 22 25 25 26 26 27 27 28 28 29 29 30 30 31 31 24 24 23 23 20~n"
+		mesh :+ "f 32 33 34 35 36 37 38 39~n"
+		
+		mesh :+ "v 2.5 3.0 -1.8~n"
+		mesh :+ "v 2.5 3.0 1.8~n"
+		mesh :+ "v 2.5 1.0 1.8~n"
+		mesh :+ "v 2.5 1.0 -1.8~n"
+		mesh :+ "v 2.5 1.0 -1.0~n"
+		mesh :+ "v 2.5 1.0 1.0~n"
+		mesh :+ "v 2.5 0.0 2.0~n"
+		mesh :+ "v 2.5 -2.0 2.0~n"
+		mesh :+ "v 2.5 -3.0 1.0~n"
+		mesh :+ "v 2.5 -3.0 -1.0~n"
+		mesh :+ "v 2.5 -2.0 -2.0~n"
+		mesh :+ "v 2.5 0.0 -2.0~n"
+		
+		mesh :+ "v 2.5 0.4 -1.0~n"
+		mesh :+ "v 2.5 -0.4 -0.4~n"
+		mesh :+ "v 2.5 0.4 1.0~n"
+		mesh :+ "v 2.5 -0.4 0.4~n"
+		mesh :+ "v 2.5 -2.0 -1.0~n"
+		mesh :+ "v 2.5 -1.2 -0.4~n"
+		mesh :+ "v 2.5 -2.0 1.0~n"
+		mesh :+ "v 2.5 -1.2 0.4~n"
+		
+		mesh :+ "f 40 41 41 42 42 45 45 46 46 47 47 48 48 49 49 50 50 51 51 44 44 43 43 40~n"
+		mesh :+ "f 52 53 54 55 56 57 58 59~n"
+		
+		mesh :+ "v -2.5 3.0 -1.8~n"
+		mesh :+ "v -2.5 3.0 1.8~n"
+		mesh :+ "v -2.5 1.0 1.8~n"
+		mesh :+ "v -2.5 1.0 -1.8~n"
+		mesh :+ "v -2.5 1.0 -1.0~n"
+		mesh :+ "v -2.5 1.0 1.0~n"
+		mesh :+ "v -2.5 0.0 2.0~n"
+		mesh :+ "v -2.5 -2.0 2.0~n"
+		mesh :+ "v -2.5 -3.0 1.0~n"
+		mesh :+ "v -2.5 -3.0 -1.0~n"
+		mesh :+ "v -2.5 -2.0 -2.0~n"
+		mesh :+ "v -2.5 0.0 -2.0~n"
+		
+		mesh :+ "v -2.5 0.4 -1.0~n"
+		mesh :+ "v -2.5 -0.4 -0.4~n"
+		mesh :+ "v -2.5 0.4 1.0~n"
+		mesh :+ "v -2.5 -0.4 0.4~n"
+		mesh :+ "v -2.5 -2.0 -1.0~n"
+		mesh :+ "v -2.5 -1.2 -0.4~n"
+		mesh :+ "v -2.5 -2.0 1.0~n"
+		mesh :+ "v -2.5 -1.2 0.4~n"
+		
+		mesh :+ "f 60 61 61 62 62 65 65 66 66 67 67 68 68 69 69 70 70 71 71 64 64 63 63 60~n"
+		mesh :+ "f 72 73 74 75 76 77 78 79~n"
+		
+		mesh :+ "v -3.0 -3.5 -3.0~n"
+		mesh :+ "v -3.0 3.5 -3.0~n"
+		mesh :+ "v 3.0 3.5 -3.0~n"
+		mesh :+ "v 3.0 -3.5 -3.0~n"
+		mesh :+ "v -3.0 -3.5 3.0~n"
+		mesh :+ "v -3.0 3.5 3.0~n"
+		mesh :+ "v 3.0 3.5 3.0~n"
+		mesh :+ "v 3.0 -3.5 3.0~n"
+		mesh :+ "f 80 81 81 82 82 83 83 80 -1~n"
+		mesh :+ "f 83 82 82 86 86 87 87 83 -1~n"
+		mesh :+ "f 84 85 85 86 86 87 87 84 -1~n"
+		mesh :+ "f 80 81 81 85 85 84 84 80 -1~n"
+
+		Return mesh
+	EndMethod
+	
+	Method powerupBombWireframeGUI:String()
+		Local mesh:String
+		mesh :+ "linelist~n"
+		mesh :+ "v -1.8 3.0 0.0~n"
+		mesh :+ "v 1.8 3.0 0.0~n"
+		mesh :+ "v 1.8 1.0 0.0~n"
+		mesh :+ "v -1.8 1.0 0.0~n"
+		mesh :+ "v -1.0 1.0 0.0~n"
+		mesh :+ "v 1.0 1.0 0.0~n"
+		mesh :+ "v 2.0 0.0 0.0~n"
+		mesh :+ "v 2.0 -2.0 0.0~n"
+		mesh :+ "v 1.0 -3.0 0.0~n"
+		mesh :+ "v -1.0 -3.0 0.0~n"
+		mesh :+ "v -2.0 -2.0 0.0~n"
+		mesh :+ "v -2.0 0.0 0.0~n"
+		
+		mesh :+ "v -1 0.4 0.0~n"
+		mesh :+ "v -0.4 -0.4 0.~n"
+		mesh :+ "v 1 0.4 0.0~n"
+		mesh :+ "v 0.4 -0.4 0.0~n"
+		mesh :+ "v -1.0 -2.0 0.0~n"
+		mesh :+ "v -0.4 -1.2 0.0~n"
+		mesh :+ "v 1.0 -2.0 0.0~n"
+		mesh :+ "v 0.4 -1.2 0.0~n"
+		
+		mesh :+ "f 0 1 1 2 2 5 5 6 6 7 7 8 8 9 9 10 10 11 11 4 4 3 3 0~n"
+		mesh :+ "f 12 13 14 15 16 17 18 19~n"
+		
+		Return mesh
+	EndMethod
+	
+	Method powerupBombSolid:String()
+		Local mesh:String
+		mesh :+ "trianglelist~n"
+		mesh :+ "v -2.5 -3.0 -2.5~n"
+		mesh :+ "v -2.5 3.0 -2.5~n"
+		mesh :+ "v 2.5 3.0 -2.5~n"
+		mesh :+ "v 2.5 -3.0 -2.5~n"
+		mesh :+ "v -2.5 -3.0 2.5~n"
+		mesh :+ "v -2.5 3.0 2.5~n"
+		mesh :+ "v 2.5 3.0 2.5~n"
+		mesh :+ "v 2.5 -3.0 2.5~n"
+
+		mesh :+ "f 0 1 2 0 2 3~n"
+		mesh :+ "f 3 2 6 3 6 7~n"
+		mesh :+ "f 4 5 1 4 1 0~n"
+		mesh :+ "f 7 6 5 7 5 4~n"
+		mesh :+ "f 4 0 3 4 3 7~n"
+		mesh :+ "f 1 5 2 2 5 6~n"
+
 		Return mesh
 	EndMethod
 
@@ -995,7 +1162,9 @@ Type tGame
 
 	Field _powerUp:tobject 		' on screen power up
 	Field _shippowerup:tobject
-	Field _galacticBomb:tObject
+	Field _powerUpBomb:tObject
+
+	Field _bombCount:Int
 	
 	Field _alien:tobject 	' on screen alien
 	Field _alienbig:tobject
@@ -1100,12 +1269,12 @@ Type tGame
 	Method createQuadResources(Width:Int, Height:Int)
 		' create vertex buffer
 		Local quadVertices:Float[]
-		quadVertices :+ [-1.0, -1.0, 0.0, 0.0, 1.0]
-		quadVertices :+ [-1.0,  1.0, 0.0, 0.0, 0.0]
-		quadVertices :+ [ 1.0,  1.0, 0.0, 1.0, 0.0]
-		quadVertices :+ [-1.0, -1.0, 0.0, 0.0, 1.0]
-		quadVertices :+ [ 1.0,  1.0, 0.0, 1.0, 0.0]
-		quadVertices :+ [ 1.0, -1.0, 0.0, 1.0, 1.0]
+		quadVertices :+ [-1.0, -1.0, 0.1, 0.0, 1.0]
+		quadVertices :+ [-1.0,  1.0, 0.1, 0.0, 0.0]
+		quadVertices :+ [ 1.0,  1.0, 0.1, 1.0, 0.0]
+		quadVertices :+ [-1.0, -1.0, 0.1, 0.0, 1.0]
+		quadVertices :+ [ 1.0,  1.0, 0.1, 1.0, 0.0]
+		quadVertices :+ [ 1.0, -1.0, 0.1, 1.0, 1.0]
 		
 		Local desc:D3D11_BUFFER_DESC = New D3D11_BUFFER_DESC
 		desc.ByteWidth = SizeOf(quadVertices)
@@ -1234,10 +1403,12 @@ Type tGame
 		_scoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
 		_scoreobject.moveTo(-21, 13, -5)
 		tobjectscore(_scoreobject).setscorepointer(Varptr _score)
+		_scoreObject.setName("score")
 
 		_highscoreobject = New tobjectscore.Create(_pipeline._device, Null, _gui, RENDERFLAG_WIREFRAME)
 		_highscoreobject.moveTo(0, 13, -5)
 		tobjectscore(_highscoreobject).setscorepointer(Varptr _highscore)
+		_highscoreobject.setname("highscore")
 		
 		' title
 		Local msg:String = "StarRoids"
@@ -1327,7 +1498,7 @@ Type tGame
 		_copyright.moveTo(0, -14, -5)
 		_copyright.setname("copyright")
 		
-		msg = "original game idea by atari inc 1979"
+		msg = "syntax bomb indie coder competition july 2017"
 		Local textmesh:tmesh = _font.createSentence(msg)
 		textmesh.scale(0.5, 0.5, 0.5)
 
@@ -1374,25 +1545,30 @@ Type tGame
 		_shipupgradedsolid.setName("shipupgradedsolid")
 		
 		' powerupship
-		Local powerupshipmeshsolid:tmesh = parsemeshdata(_meshdata.powerupshipsolid(), 0.4)
-		Local powerupshipmeshwireframe:tmesh = parsemeshdata(_meshdata.powerupshipWireframe(), 0.41)
+		Local powerupshipmeshsolid:tmesh = parsemeshdata(_meshdata.powerupshipsolid(), 0.34)
+		Local powerupshipmeshwireframe:tmesh = parsemeshdata(_meshdata.powerupshipWireframe(), 0.35)
 		_shipPowerUp = New tobject.Create(_pipeline._device, powerupshipmeshsolid, Null, RENDERFLAG_SOLID)
 		Local powerupshipwireframe:tobject = New tobject.Create(_pipeline._device, powerupshipmeshwireframe, _shipPowerUp, RENDERFLAG_WIREFRAME)
 		_shipPowerUp.setCollisionId(COLLISION_ID_POWERUP)
 		_shipPowerUp.setCollisionRadius(1.0)
 		_shipPowerUp.setname("powerup-ship")
 		
-		Local anim:trotationanimator = New trotationanimator
-		anim.init(0.0, -1.0, 0.0)
-		_shippowerup.addanimator(anim)
-		
 		' galactic bomb
-		Local bombmesh:tmesh = parsemeshdata(_meshdata.galacticbomb(), 1.0)
-		'_galacticBomb = New tobject.Create(_pipeline._device, bombmesh, _scene, RENDERFLAG_WIREFRAME)
-		'_galacticBomb.setCollisionId(COLLISION_ID_POWERUP)
-		'_galacticBomb.setCollisionRadius(1.0)
-		'_galacticBomb.setName("bomb")
-
+		Local bombmeshsolid:tmesh = parsemeshdata(_meshdata.powerupbombsolid(), 0.34)
+		Local bombmeshwireframe:tmesh = parsemeshdata(_meshdata.powerupBombWireframe(), 0.35)
+		_powerupBomb = New tobject.Create(_pipeline._device, bombmeshsolid, Null, RENDERFLAG_SOLID)
+		Local powerupbombwireframe:tobject = New tobject.Create(_pipeline._device, bombmeshwireframe, _powerupbomb, RENDERFLAG_WIREFRAME)
+		_powerupBomb.setCollisionId(COLLISION_ID_POWERUP)
+		_powerupBomb.setCollisionRadius(1.0)
+		_powerupBomb.setName("bomb")
+		
+		' bomb display
+		Local bombDisplay:tmesh = parseMeshData(_meshdata.powerupBombWireframeGui(), 1.0)
+		bombDisplay.scale(0.25, 0.3, 1.0)
+		Local bombGui:tobjectBombIndicator = New tobjectBombIndicator.Create(_pipeline._device, bombDisplay, _gui, RENDERFLAG_WIREFRAME)
+		bombGui.setName("bombDisplay")
+		bombGui.setBombCountPointer(Varptr _bombCount)
+		
 		' alien big ship
 		Local alienmesh:tmesh = parseMeshData(_meshdata.alienbigwireframe(), 1.0)
 		alienmesh.scale(1.0, 2.0, 1.0)	
@@ -1407,12 +1583,12 @@ Type tGame
 		_alienLittle.setCollisionId(COLLISION_ID_ALIEN)
 		_alienLittle.setCollisionRadius(0.6)
 		_alienLittle.setname("alienLittle")
-
 		
 		' alien bullet
 		_alienBullet = New tObject.Create(_pipeline._device, parseMeshData(_meshdata.alienbulletWireframe(), 0.2), Null, RENDERFLAG_WIREFRAME)
 		_alienBullet.setCollisionRadius(0.2)
 		_alienBullet.setCollisionId(COLLISION_ID_ALIEN_BULLET)
+		_alienbullet.setName("alienbullet")
 		
 		' create bullets
 		Local bulletMesh:tMesh = parsemeshdata(_meshdata.bulletWireframe(), 1.0)
@@ -1420,6 +1596,7 @@ Type tGame
 			Local bullet:tobject = New tobject.Create(_pipeline._device, bulletMesh, Null, RENDERFLAG_WIREFRAME)
 			bullet.setCollisionId(COLLISION_ID_BULLET)
 			bullet.setCollisionRadius(0.1)
+			bullet.setName("playerbullet")
 			_bulletstore.addlast(bullet)
 		Next
 		
@@ -1429,6 +1606,7 @@ Type tGame
 
 		For Local i:Int = 0 Until 256
 			Local particle:tobject = New tobject.Create(_pipeline._device, particleMesh, Null, RENDERFLAG_WIREFRAME)
+			particle.setName("particle")
 			_particleStore.addLast(particle)
 		Next
 		
@@ -1442,7 +1620,7 @@ Type tGame
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8)
 			rock.setColourSolid(0.12, 0.12, 0.12, 1.0)
-			
+			rock.setName("rockBig")
 			tobjectrock(rock).setSize(3)			
 			_rockstore.addLast(rock)
 		Next
@@ -1454,7 +1632,7 @@ Type tGame
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8 * 0.6)
 			rock.setColourSolid(0.12, 0.12, 0.12, 1.0)
-			
+			rock.setName("rockMedium")
 			tobjectrock(rock).setSize(2)
 			_rockstore.addLast(rock)
 		Next
@@ -1466,7 +1644,7 @@ Type tGame
 			rock.setCollisionId(COLLISION_ID_ROCK)
 			rock.setCollisionRadius(1.8 * 0.3)
 			rock.setColourSolid(0.12, 0.12, 0.12, 1.0)
-			
+			rock.setName("rockSmall")
 			tobjectrock(rock).setSize(1)
 			_rockstore.addLast(rock)
 		Next
@@ -1666,17 +1844,18 @@ Type tGame
 		source :+ "}~n"
 
 		source :+ "float4 PSMainQuad(PSINPUTQUAD psIn) : SV_Target{~n"
-		source :+ "    float2 uv = psIn.pos.xy - centre;~n"
-		source :+ "    float color = 1-smoothstep(-((time/8) * (time/8)), 20, abs(length(uv/4) - time + sin(atan2(uv.y, uv.x))));~n"
+		source :+ "    float2 pos = psIn.pos.xy - centre;~n"
+		source :+ "    float color = 1-smoothstep(-((time/8) * (time/8)), 20, abs(length(pos/4) - time + sin(atan2(pos.y, pos.x))));~n"
 
 		source :+ "    if(freq != 0){~n"
-		source :+ "        uv = psIn.uv * cos(color);~n"
+		source :+ "        float2 offset = psIn.uv * 2 - 1;~n"
+		source :+ "        pos = psIn.uv + offset * sin(color);~n"
 		source :+ "    }~n"
 		source :+ "    else{~n"
-		source :+ "        uv = psIn.uv;~n"
+		source :+ "        pos = psIn.uv;~n"
 		source :+ "    }~n"
 		
-		source :+ "    return float4(quadTexture.Sample(quadSampler, uv) + (sin(color) * freq));~n;~n"
+		source :+ "    return float4(quadTexture.Sample(quadSampler, pos) + (sin(color) * freq));~n;~n"
 		source :+ "};~n"
 
 		Return source
@@ -1704,7 +1883,7 @@ Type tGame
 		If wave > 5 wave = 5
 
 		_alienShipController.init(MilliSecs(), True)
-		
+
 		' top edge
 		For Local i:Int = 0 Until (3 + wave) / 3
 			_rocksToDestroy :+ 1
@@ -1767,7 +1946,7 @@ Type tGame
 				rockanim.init(Rnd(-velMin, -velMax), Rnd(-velMax, velMax), 0.0,  Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1))
 				rock.addAnimator(rockanim)
 			EndIf
-		Next	
+		Next
 	EndMethod
 
 	Method updateintro()
@@ -1807,16 +1986,17 @@ Type tGame
 			_pipeline.Present(True)
 	EndMethod
 	
-	Method renderGUI()
-		_pipeline.turnOffDepthTesting()
-		_pipeline.setWireframeOn()
+	Method renderGUI()	
 		_pipeline.setBackBuffer()
 		_pipeline._context.IASetInputLayout(_inputLayout)
 		_pipeline._context.VSSetConstantBuffers(0, 1, Varptr _vsConstants)
 		_pipeline._context.VSSetShader(_vertexShader, Null, 0)
 		_pipeline._context.PSSetShader(_pixelShader, Null, 0)
 		_pipeline._context.PSSetConstantBuffers(0, 1, Varptr _psConstants)
-
+	
+		' wires
+		_pipeline.setWireframeOn()
+		_pipeline.turnOffDepthTesting()
 		_gui.renderWireframe(_pipeline._context)
 	EndMethod
 	
@@ -2257,6 +2437,43 @@ Type tobjectScore Extends tobject
 	EndMethod
 EndType
 
+Type tobjectBombIndicator Extends tobject
+	Field _bombGui:tobject[5]
+	Field _bombCountPtr:Int Ptr
+
+	Method Create:tobjectbombIndicator(device:ID3D11Device, mesh:tmesh, parent:tobject, renderFlag:Int)
+		setparent(parent)
+		Local initTimeMs:Int = MilliSecs()
+		
+		For Local i:Int = 0 Until 5
+			_bombgui[4 - i] = New tObject.Create(device, mesh, Self, renderflag)
+			_bombGui[4 - i].moveTo(20 + (1.25 * i), 14.8, 0.0)
+			_bombGui[4 - i].setName("bombforGui")
+			
+			Local bombAnim:tRollAnimator = New tRollanimator
+			bombAnim.init(2, 5000, 1500, initTimeMs)
+			_bombGui[4 - i].addAnimator(bombAnim)
+
+			initTimeMs :+ 120
+		Next
+		
+		Return Self
+	EndMethod
+	
+	Method setBombCountPointer(bombCountPtr:Int Ptr)
+		_bombCountPtr = bombCountPtr
+	EndMethod
+	
+	Method renderWireframe(context:ID3D11DeviceContext)
+		If _bombCountPtr
+			Local count:Int = _bombCountPtr[0]
+			For Local i:Int = 0 Until count
+				_bombGui[i].renderWireframe(context)
+			Next
+		EndIf
+	EndMethod
+EndType
+
 Type tanimator
 	Method animate(obj:tobject, timeMs:Int) Abstract
 EndType
@@ -2542,9 +2759,11 @@ Type tShipAnimator Extends tanimator
 		If KeyDown(KEY_LEFT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz - st)
 		If KeyDown(KEY_RIGHT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz + st)
 	
-		If KeyHit(KEY_DOWN)
-			Local bombAnim:tBombParameterAnimator = New tBombParameterAnimator
+		If KeyHit(KEY_DOWN) And game._bombCount > 0
+			Local bombAnim:tBombBlastAnimator = New tBombBlastAnimator
+			bombAnim.init(obj._posx, obj._posy, obj._posz)
 			game._scene.addAnimator(bombAnim)
+			game._bombCount :- 1
 		EndIf
 
 		' adjust some thrust
@@ -2717,6 +2936,7 @@ Type tAlienBulletAnimator Extends tanimator
 		EndIf
 	EndMethod
 EndType
+
 Type tRotationAnimator Extends tAnimator
 	Field _rotx:Float
 	Field _roty:Float
@@ -2931,9 +3151,18 @@ Type tAlienShipControlAnimator Extends tAnimator
 	EndMethod
 EndType
 
-Type tBombParameterAnimator Extends tAnimator
+Type tBombBlastAnimator Extends tAnimator
 	Field _val:Float
-	
+	Field _posx:Float
+	Field _posy:Float
+	Field _posz:Float
+
+	Method init(posx:Float, posy:Float, posz:Float)
+		_posx = posx
+		_posy = posy
+		_posz = posz
+	EndMethod
+
 	Method animate(obj:tobject, timeMs:Int)
 		Local root:tobject = obj.getRoot()
 		If Not root Return
@@ -2948,7 +3177,7 @@ Type tBombParameterAnimator Extends tAnimator
 			Local matrix:Float[16]
 			math.multiplym4m4(game._proj, game._view, matrix)
 
-			Local pos:Float[] = [ game._ship._posx, game._ship._posy, game._ship._posz, 1.0]		
+			Local pos:Float[] = [ _posx, _posy, _posz, 1.0]		
 			Local vector:Float[4]
 			math.multiplyv4m4(pos, matrix, vector)
 
@@ -2957,10 +3186,87 @@ Type tBombParameterAnimator Extends tAnimator
 
 			game._bombCentreX = px * 1200
 			game._bombCentreY = 700 - py * 700
+			
+			handleBlast(game._scene, timeMs)
 		Else
 			game._bombActive = False
 			game._scene._animators.remove(Self)
 		EndIf
+	EndMethod
+	
+	Method handleBlast(scene:tobject, timeMs:Int )
+		Local root:tobject = scene.getroot()
+		Local game:tgame = tgame(root._extra)
+		
+		For Local obj:tobject = EachIn scene._children				
+			Local vecx:Float = obj._posx - _posx
+			Local vecy:Float = obj._posy - _posy
+
+			Local l:Float = Sqr(vecx * vecx + vecy * vecy)
+			Local nx:Float = vecx / l
+			Local ny:Float = vecy / l
+			
+			
+			' uggh nasty way to deal with this :/ - remove the alien bullet when the bomb goes off
+			Local alienBullet:tObject
+			For Local anim:tAnimator = EachIn obj._animators
+				If tAlienBulletAnimator(anim) alienBullet = obj
+			Next
+			If alienBullet
+				game._alienBullet = alienBullet
+				alienBullet.setparent(Null)
+				alienBullet._animators.clear()
+			' end of nasty
+			
+			 ' object within range of blast?
+			ElseIf _val < 65 And l < _val / 4.5
+				Local force:Float = (1.0 - _val / 90.0) * 0.3
+				
+				If game._alien And obj = game._alien
+					' remove the alien
+					game._alien._animators.clear()
+					game._alien.setparent(Null)
+					game._alien = Null
+					game._alienShipController.init(timeMs, True)
+	
+					StopChannel(game._channelAlien)
+					PlaySound(game._sampleRocks[0])
+		
+					Local epicentre:tobject = New tobject
+					epicentre.setparent(game._scene)
+			
+					For Local i:Int = 0 Until 32
+						Local particleanim:tParticleAnimator = New tParticleAnimator
+						particleanim.init(nx * force * 2 * Rnd(-0.25, 0.25), ny * force * 2 + Rnd(-0.25, 0.25), Rnd(-0.25, 0.25), 0.0, 0.0, 0.0, timeMs, 1000)
+						
+						Local particle:tobject = tobject(game._particlestore.removefirst())
+						If particle
+							particle.setParent(game._scene)
+							particle.moveTo(obj._posx, obj._posy, obj._posz)
+							particle.addAnimator(particleanim)
+						EndIf
+					Next
+		
+				ElseIf tobjectrock(obj)
+					If _val < 35
+						game.destroyRock(tobjectrock(obj), timeMs)
+						If game._rocksTodestroy = 0
+							Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
+							leaveLevel.init(timeMs)
+							game._scene.addanimator(leaveLevel)
+						EndIf
+					
+					Else
+						For Local anim:tAnimator = EachIn obj._animators
+							Local rockAnim:tRockAnimator = tRockAnimator(anim)
+							If rockAnim
+								rockanim.init(nx * Max(force, rockAnim._velx), ny * Max(force, rockAnim._velx), 0.0, rockAnim._rotx, rockAnim._roty, rockAnim._rotz)
+							EndIf
+						Next				
+					EndIf
+				EndIf
+			EndIf
+		Next
 	EndMethod
 EndType
 
@@ -3040,7 +3346,7 @@ Type tShipBulletToAlienHandler Extends tCollisionHandler
 				If game._ship = game._shipbasic
 					powerup = game._shipPowerUp
 				Else
-					' give the bomb upgrade
+					powerup = game._powerUpBomb
 				EndIf
 				
 				If powerUp
@@ -3156,6 +3462,10 @@ Type tShipPowerUpHandler Extends tCollisionHandler
 			' remove old ship from gameplay
 			game._ship.setParent(Null)
 			game._ship = game._shipupgraded
+		
+		Else If powerup = game._powerupBomb
+			game._bombCount = Min(game._bombCount + 1, 5) ' maximum of 5 bombs
+
 		EndIf
 		
 		PlaySound(game._sampleUpgrade)
