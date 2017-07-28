@@ -2312,12 +2312,12 @@ Type tBeginLevelAnimator Extends tAnimator
 		Case 1
 			_targetx = 14.0
 			_targety = 28.0
-			_targetz = 24.0
+			_targetz = 26.5
 
 		Case 2
 			_targetx = -14.0
 			_targety = 28.0
-			_targetz = 24.0
+			_targetz = 26.5
 
 		Case 3
 			_targetx = -34.0
