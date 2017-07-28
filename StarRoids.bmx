@@ -661,6 +661,14 @@ Type math
 		Next
 	EndFunction
 	
+	Function multiplyv4m4(ina:Float[], inb:Float[], inout:Float[])
+		For Local i:Int = 0 Until 4
+			For Local j:Int = 0 Until 4
+				inout[i] :+ ina[i] * inb[i * 4 + j]
+			Next
+		Next
+	EndFunction
+	
 	Function rotationxm4(angle:Float, inout:Float[])
 		inout[0] = 1.0;  inout[1] = 0.0;         inout[2] = 0.0;         inout[3] = 0.0
 		inout[4] = 0.0;  inout[5] = Cos(angle);  inout[6] = Sin(angle);  inout[7] = 0.0
@@ -979,8 +987,8 @@ Type tGame
 	Field _shipupgradedwire:tobject
 	Field _shipupgradedsolid:tobject
 	
-	Field _bombFreq:Float
-	Field _bombTimeMs:Float
+	Field _bombActive:Float
+	Field _bombTime:Float
 	Field _bombCentreX:Float
 	Field _bombCentreY:Float
 
@@ -1081,9 +1089,6 @@ Type tGame
 		createShaderResources()
 		createQuadResources(Width, Height)
 		createGameObjects()
-		
-		Local bombAnim:tBombParameterAnimator = New tBombParameterAnimator
-		_scene.addAnimator(bombAnim)
 	EndMethod
 	
 	Method createQuadResources(Width:Int, Height:Int)
@@ -1370,7 +1375,6 @@ Type tGame
 		_shipPowerUp.setCollisionId(COLLISION_ID_POWERUP)
 		_shipPowerUp.setCollisionRadius(1.0)
 		_shipPowerUp.setname("powerup-ship")
-		_shippowerup.moveto(0.0, -14.0, 0.0)
 		
 		Local anim:trotationanimator = New trotationanimator
 		anim.init(0.0, -1.0, 0.0)
@@ -1656,13 +1660,18 @@ Type tGame
 		source :+ "}~n"
 
 		source :+ "float4 PSMainQuad(PSINPUTQUAD psIn) : SV_Target{~n"
-		source :+ "    float2 uv =  psIn.uv + 1;~n" 
-		source :+ "    float r  = length(uv);~n"
-		source :+ "    float z = sin(r + time) / r;~n"
+		source :+ "    float2 uv = psIn.pos.xy - centre;~n"
+		source :+ "    float color = 1-smoothstep(-((time/8) * (time/8)), 20, abs(length(uv/4) - time + sin(atan2(uv.y, uv.x))));~n"
 
-		source :+ "    return quadTexture.Sample(quadSampler, psIn.uv + z);~n"
+		source :+ "    if(freq != 0){~n"
+		source :+ "        uv = psIn.uv * cos(color);~n"
+		source :+ "    }~n"
+		source :+ "    else{~n"
+		source :+ "        uv = psIn.uv;~n"
+		source :+ "    }~n"
+		
+		source :+ "    return float4(quadTexture.Sample(quadSampler, uv) + (sin(color) * freq));~n;~n"
 		source :+ "};~n"
-
 
 		Return source
 	EndMethod
@@ -1810,8 +1819,8 @@ Type tGame
 	Method renderQuadToBackBuffer()
 		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
 		_pipeline._context.map(_quadConstantsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, map)
-		MemCopy(map.pData, Varptr _bombFreq, 4)
-		MemCopy(map.pData + 4, Varptr _bombTimeMs, 4)
+		MemCopy(map.pData, Varptr _bombActive, 4)
+		MemCopy(map.pData + 4, Varptr _bombTime, 4)
 		MemCopy(map.pData + 8, Varptr _bombCentreX, 4)
 		MemCopy(map.pData + 12, Varptr _bombCentreY, 4)
 		_pipeline._context.Unmap(_quadConstantsBuffer, 0)
@@ -2510,7 +2519,12 @@ Type tShipAnimator Extends tanimator
 		Local st:Float = 5
 		If KeyDown(KEY_LEFT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz - st)
 		If KeyDown(KEY_RIGHT) obj.rotateTo(obj._rotx, obj._roty, obj._rotz + st)
-			
+	
+		If KeyHit(KEY_DOWN)
+			Local bombAnim:tBombParameterAnimator = New tBombParameterAnimator
+			game._scene.addAnimator(bombAnim)
+		EndIf
+
 		' adjust some thrust
 		If KeyDown(KEY_UP)
 			_velx :+ 0.01 * Sin(obj._rotz)
@@ -2896,20 +2910,35 @@ Type tAlienShipControlAnimator Extends tAnimator
 EndType
 
 Type tBombParameterAnimator Extends tAnimator
-	Field _Freq:Float
-
+	Field _val:Float
+	
 	Method animate(obj:tobject, timeMs:Int)
 		Local root:tobject = obj.getRoot()
 		If Not root Return
-		
+
 		Local game:tgame = tgame(root._extra)
 		
-		_Freq = Cos(timeMs Mod 360) * 1.0
-		game._bombFreq = 0.0
-		
-		game._bombCentreX = 0.5
-		game._bombCentreY = 0.5
-		game._bombTimeMs = Sin(timeMs Mod 360) * 0.5
+		If _val < 90
+			_val :+ 1
+			game._bombActive = 1
+			game._bombTime = _val
+			
+			Local matrix:Float[16]
+			math.multiplym4m4(game._proj, game._view, matrix)
+
+			Local pos:Float[] = [ game._ship._posx, game._ship._posy, game._ship._posz, 1.0]		
+			Local vector:Float[4]
+			math.multiplyv4m4(pos, matrix, vector)
+
+			Local px:Float = ( vector[0] / vector[3] ) * 0.5 + 0.5
+			Local py:Float = ( vector[1] / vector[3] ) * 0.5 + 0.5
+
+			game._bombCentreX = px * 1200
+			game._bombCentreY = 700 - py * 700
+		Else
+			game._bombActive = False
+			game._scene._animators.remove(Self)
+		EndIf
 	EndMethod
 EndType
 
@@ -2952,7 +2981,7 @@ EndType
 
 Type tShipToRockHandler Extends tCollisionHandler
 	Method invoke(collisionData:tCollisionData)
-		Throw "ShipToRock handler"
+		DebugLog "ShipToRock handler"
 	EndMethod
 EndType
 
@@ -3029,7 +3058,7 @@ EndType
 
 Type tAlienBulletToShipHandler Extends tCollisionHandler
 	Method invoke(collisionData:tCollisionData)
-		Throw "tAlienBulletToShipHandler"
+		DebugLog "tAlienBulletToShipHandler"
 	EndMethod
 EndType
 
@@ -3072,6 +3101,8 @@ Type tAlienShipToRockHandler Extends tCollisionHandler
 		game._alien = Null
 		game._alienShipController.init(collisionData._timeMs, True)
 		
+		StopChannel(game._channelAlien)
+
 		' alien could have removed the last rock?
 		If game._rocksTodestroy = 0
 			Local leaveLevel:tLeaveLevelAnimator = New tLeaveLevelAnimator
