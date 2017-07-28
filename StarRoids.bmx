@@ -1212,7 +1212,7 @@ Type tGame
 		_sampleIntro = LoadSound("sounds/intro.wav", SOUND_LOOP)
 		
 		_sampleUpgrade = LoadSound("sounds/upgrade.wav")
-		_sampleShot = LoadSound("sounds/sfire.wav")
+		_sampleShot = LoadSound("sounds/fire.wav")
 		_sampleLife = LoadSound("sounds/life.wav")
 		_sampleRocks[0] = LoadSound("sounds/explode3.wav")
 		_sampleRocks[1] = LoadSound("sounds/explode2.wav")
