@@ -4062,15 +4062,18 @@ Type tCollisionManager Extends tAnimator
 	EndMethod
 EndType
 
-AppTitle = "Star-Roids"
+Try
+	AppTitle = "Star-Roids"
 
-SeedRnd(MilliSecs() * MilliSecs())
-HideMouse()
-Local game:tGame = New tGame
-game.init(1200, 700)
-game.run()
-game.shutdown()
-
+	SeedRnd(MilliSecs() * MilliSecs())
+	HideMouse()
+	Local game:tGame = New tGame
+	game.init(1200, 700)
+	game.run()
+	game.shutdown()
+Catch err$
+	Notify err
+endtry
 
 
 
