@@ -1,0 +1,22 @@
+Welcome to the StarRoids game.
+Made in just 2 weeks from scratch for the SyntaxBomb July 2017 Indie Coder 'code a game' competition.
+
+Controls are:-
+    LEFT and RIGHT arrow keys to rotate your ship.
+    UP arrow to thrust forward.
+    SPACE to shoot.
+
+    When you see a 'power up' icon, move your ship into it to pick up.
+    When you get a 'bomb power up', press the DOWN arrow key to 'drop the bomb'.
+
+    ESCAPE quits the game.
+
+Quick guide:
+    LEFT & RIGHT - steer ship
+    UP           - thrust
+    SPACE        - fire
+    DOWN         - Use bomb
+
+
+
+Developed in Windows7. DirectX 11 is required.
