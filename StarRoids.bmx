@@ -4,6 +4,10 @@ Strict
 Import pub.win32
 Import srs.directx11
 
+Extern"Win32"
+Function MessageBoxA(hWnd:Byte Ptr, lpText:Byte Ptr, lpCaption:Byte Ptr, uType:Int)
+EndExtern
+
 Const RENDERFLAG_SOLID:Int = 1
 Const RENDERFLAG_WIREFRAME:Int = 2
 
@@ -1002,7 +1006,18 @@ Type tGpuD3D11
 	Field _backbufferView:ID3D11RendertargetView
 	Field _depthstencilView:ID3D11DepthstencilView
 	
-	Method Create:TGpuD3D11(Width:Int, Height:Int, WindowHandle:Byte Ptr)
+	Field _multiSampleCount:Int
+	Field _multiSampleQuality:Int
+	
+	Method Create:TGpuD3D11(Width:Int, Height:Int, WindowHandle:Byte Ptr, useMs)
+		If useMs
+			_multiSampleCount = 4
+			_multiSampleQuality = -1
+		Else
+			_multiSampleCount = 1
+			_multiSampleQuality = 0
+		EndIf
+
 		createDeviceAndSwapchain(Width, Height, WindowHandle)
 		createDepthtarget(Width, Height)
 		createBackbuffer()
@@ -1030,8 +1045,8 @@ Type tGpuD3D11
 		desc.OutputWindow = Int WindowHandle
 		desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD
 		desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
-		desc.SampleDesc_Count = 1
-		desc.SampleDesc_Quality = 0
+		desc.SampleDesc_Count = _multisampleCount
+		desc.SampleDesc_Quality = _multisampleQuality
 
 		D3D11CreateDeviceAndSwapchain(Null, D3D_DRIVER_TYPE_HARDWARE, Null, 0, Null, 0, D3D11_SDK_VERSION, desc, _swapchain, _device, Varptr featureLevel, _context )
 
@@ -1057,8 +1072,8 @@ Type tGpuD3D11
 		textureDesc.MipLevels = 1
 		textureDesc.ArraySize = 1
 		textureDesc.Format = DXGI_FORMAT_R32_TYPELESS
-		textureDesc.SampleDesc_Count = 1
-		textureDesc.SampleDesc_Quality = 0
+		textureDesc.SampleDesc_Count = _multisampleCount
+		textureDesc.SampleDesc_Quality = _multisampleQuality
 		textureDesc.Usage = D3D11_USAGE_DEFAULT
 		textureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL ' | D3D11_BIND_SHADER_RESOURCE
 		textureDesc.CPUAccessFlags = 0
@@ -1071,6 +1086,7 @@ Type tGpuD3D11
 		Local viewdesc:D3D11_DEPTH_STENCIL_VIEW_DESC = New D3D11_DEPTH_STENCIL_VIEW_DESC
 		viewdesc.Format = DXGI_FORMAT_D32_FLOAT
 		viewdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D
+		If _multisampleCount = 4 viewdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS
 		
 		_device.createDepthStencilView(depthStencilTexture, viewdesc, _depthStencilView)
 		depthstencilTexture.release_
@@ -1243,7 +1259,7 @@ Type tGame
 	Const COLLISION_ID_ALIEN_BULLET:Int = 5
 	Const COLLISION_ID_POWERUP:Int = 6
 
-	Method init(Width:Int, Height:Int)
+	Method init(Width:Int, Height:Int, useMs:Int)
 		_meshdata = New tMeshData
 		_particleStore = New TList
 		_bulletstore = New TList
@@ -1286,7 +1302,7 @@ Type tGame
 		_gui.setname("gui")
 
 		_window = New TWindow.Create(Width, Height)
-		_pipeline = New TGpuD3D11.Create(Width, Height, _window.getWindowHandle())
+		_pipeline = New TGpuD3D11.Create(Width, Height, _window.getWindowHandle(), useMs)
 	
 		_view = [1.0, 0.0, 0.0, 0.0,..
 		         0.0, 1.0, 0.0, 0.0,..
@@ -1335,8 +1351,8 @@ Type tGame
 		textureDesc.MipLevels = 1
 		textureDesc.ArraySize = 1
 		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM
-		textureDesc.SampleDesc_Count = 1
-		textureDesc.SampleDesc_Quality = 0
+		textureDesc.SampleDesc_Count = _pipeline._multisampleCount
+		textureDesc.SampleDesc_Quality = _pipeline._multisampleQuality
 		textureDesc.Usage = D3D11_USAGE_DEFAULT
 		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE
 		textureDesc.CPUAccessFlags = 0
@@ -1350,6 +1366,7 @@ Type tGame
 		Local targetDesc:D3D11_RENDER_TARGET_VIEW_DESC = New D3D11_RENDER_TARGET_VIEW_DESC
 		targetDesc.format = DXGI_FORMAT_R8G8B8A8_UNORM
 		targetDesc.viewDimension = 4 ' D3D11_RTV_DIMENSION_TEXTURE2D
+		If textureDesc.SampleDesc_Count = 4 targetDesc.viewDimension = 6 ' D3D11_RTV_DIMENSION_TEXTURE2D
 		
 		_pipeline._device.createRenderTargetView(texture, targetDesc, _quadRendertargetView)
 		If Not _quadRendertargetView Throw " could not create render target view"
@@ -1358,6 +1375,7 @@ Type tGame
 		Local shaderDesc:D3D11_SHADER_RESOURCE_VIEW_DESC = New D3D11_SHADER_RESOURCE_VIEW_DESC
 		shaderDesc.format = DXGI_FORMAT_R8G8B8A8_UNORM
 		shaderDesc.viewDimension = 4 ' D3D11_RTV_DIMENSION_TEXTURE2D
+		If textureDesc.SampleDesc_Count = 4 shaderDesc.viewDimension = 6 ' D3D11_RTV_DIMENSION_TEXTURE2D
 		shaderDesc.Texture_MipLevels = 1
 		
 		_pipeline._device.createShaderResourceView(texture, shaderDesc, _quadShaderView)
@@ -4065,15 +4083,22 @@ EndType
 Try
 	AppTitle = "Star-Roids"
 
+	Local pText:Byte Ptr = " Use multisampling?".toCString()
+	Local pTitle:Byte Ptr = "Multisampling".toCString()
+	Local useMs:Int = MessageBoxA(Null, pText, pTitle, $4 | $20)
+
+	MemFree(pText)
+	MemFree(pTitle)
+
 	SeedRnd(MilliSecs() * MilliSecs())
 	HideMouse()
 	Local game:tGame = New tGame
-	game.init(1200, 700)
+	game.init(1200, 700, useMs = 6)
 	game.run()
 	game.shutdown()
 Catch err$
 	Notify err
-endtry
+EndTry
 
 
 
